@@ -1,0 +1,61 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.flattened-pom.xml
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+*.iws
+*.ipr
+*.project
+*.classpath
+*.c9/
+*.launch
+*.sublime-workspace
+
+# Build
+.gradle/
+build/
+dist/
+*.jar
+*.war
+*.ear
+
+# Spring Boot
+*.log
+logs/
+.spring-boot-info.properties
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+.classpath
+.settings/
+.springBeans
+.sts4-cache/
+
+# Local dev
+application-local.properties
+application-dev.properties
