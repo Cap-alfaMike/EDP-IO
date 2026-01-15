@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Walkthrough - EDP-IO</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 { color: #1e3a5f; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2c5282; margin-top: 30px; }
+        h3 { color: #4a5568; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #1e3a5f; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        code { 
+            background-color: #f4f4f4; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: 'Consolas', monospace;
+        }
+        pre { 
+            background-color: #2d3748; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code { background: none; color: inherit; }
+        blockquote {
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: #f0f7ff;
+        }
+        .mermaid-placeholder {
+            background: #f0f0f0;
+            border: 2px dashed #999;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            margin: 20px 0;
+        }
+        @media print {
+            body { padding: 20px; }
+            pre { white-space: pre-wrap; }
+        }
+    </style>
+</head>
+<body>
+<h1 id="edp-io-walkthrough">EDP-IO Walkthrough</h1>
+<h2 id="summary">Summary</h2>
+<p>Built a <strong>mock production-ready Enterprise Data Platform</strong> for Retail/Azure demonstrating Tech Lead/Architect patterns.</p>
+<hr />
+<h2 id="file-structure-50-files">File Structure (~50 files)</h2>
+<h3 id="core-utilities-srcutils">Core Utilities (<code>src/utils/</code>)</h3>
+<ul>
+<li><a href="file:///d:/EDP-IO/src/utils/config.py">config.py</a> - Pydantic Settings + feature flags</li>
+<li><a href="file:///d:/EDP-IO/src/utils/security.py">security.py</a> - SecretProvider, PIIMasker</li>
+<li><a href="file:///d:/EDP-IO/src/utils/logging.py">logging.py</a> - Structured logging</li>
+</ul>
+<h3 id="ingestion-srcingestion">Ingestion (<code>src/ingestion/</code>)</h3>
+<ul>
+<li><a href="file:///d:/EDP-IO/src/ingestion/bronze_writer.py">bronze_writer.py</a> - Delta Lake MERGE</li>
+<li><a href="file:///d:/EDP-IO/src/ingestion/oracle_ingest.py">oracle_ingest.py</a> - Oracle ERP</li>
+<li><a href="file:///d:/EDP-IO/src/ingestion/sqlserver_ingest.py">sqlserver_ingest.py</a> - SQL Server</li>
+<li><a href="file:///d:/EDP-IO/src/ingestion/mock_data.py">mock_data.py</a> - Retail data generator</li>
+<li><a href="file:///d:/EDP-IO/src/ingestion/data_contracts/contracts.yaml">contracts.yaml</a> - Data contracts</li>
+</ul>
+<h3 id="llm-observability-srcobservability">LLM Observability (<code>src/observability/</code>)</h3>
+<ul>
+<li><a href="file:///d:/EDP-IO/src/observability/log_analyzer.py">log_analyzer.py</a> - Error analysis</li>
+<li><a href="file:///d:/EDP-IO/src/observability/schema_drift.py">schema_drift.py</a> - Schema changes</li>
+<li><a href="file:///d:/EDP-IO/src/observability/doc_generator.py">doc_generator.py</a> - Auto-docs</li>
+<li><a href="file:///d:/EDP-IO/src/observability/rag_context.py">rag_context.py</a> - <strong>Chained RAG</strong></li>
+<li><a href="file:///d:/EDP-IO/src/observability/llm_metrics.py">llm_metrics.py</a> - <strong>Usage tracking</strong></li>
+</ul>
+<h3 id="orchestrator-srcorchestrator">Orchestrator (<code>src/orchestrator/</code>)</h3>
+<ul>
+<li><a href="file:///d:/EDP-IO/src/orchestrator/dag_daily.py">dag_daily.py</a> - <strong>Airflow DAG</strong></li>
+</ul>
+<h3 id="dbt-dbt_projectmodels">dbt (<code>dbt_project/models/</code>)</h3>
+<p><strong>Silver:</strong> <code>stg_customers</code>, <code>stg_products</code>, <code>stg_orders</code> (SCD2)
+<strong>Gold:</strong> <code>dim_customer</code>, <code>dim_product</code>, <code>dim_date</code>, <code>fact_sales</code></p>
+<h3 id="streamlit-app">Streamlit (<code>app/</code>)</h3>
+<ul>
+<li><a href="file:///d:/EDP-IO/app/main.py">main.py</a> - Executive dashboard</li>
+<li><a href="file:///d:/EDP-IO/app/pages/1_pipeline_status.py">1_pipeline_status.py</a></li>
+<li><a href="file:///d:/EDP-IO/app/pages/2_data_quality.py">2_data_quality.py</a></li>
+<li><a href="file:///d:/EDP-IO/app/pages/3_lineage.py">3_lineage.py</a></li>
+<li><a href="file:///d:/EDP-IO/app/pages/4_ask_architect.py">4_ask_architect.py</a></li>
+<li><a href="file:///d:/EDP-IO/app/pages/5_llm_observability.py">5_llm_observability.py</a> - <strong>NEW</strong></li>
+</ul>
+<h3 id="dataops">DataOps</h3>
+<ul>
+<li><a href="file:///d:/EDP-IO/infra/terraform/main.tf">main.tf</a> - Azure resources</li>
+<li><a href="file:///d:/EDP-IO/.github/workflows/ci.yml">ci.yml</a> - CI/CD</li>
+<li><a href="file:///d:/EDP-IO/.github/workflows/dbt-daily.yml">dbt-daily.yml</a> - Scheduled runs</li>
+</ul>
+<hr />
+<h2 id="how-to-run">How to Run</h2>
+<pre class="codehilite"><code class="language-bash">pip install -r requirements.txt
+streamlit run app/main.py
+</code></pre>
+
+<h2 id="production-deployment">Production Deployment</h2>
+<ol>
+<li>Set <code>ENABLE_AZURE_INTEGRATION=true</code></li>
+<li>Configure Key Vault secrets</li>
+<li>Run <code>terraform apply -var-file="environments/prod.tfvars"</code></li>
+</ol>
+<footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+    <p>EDP-IO - Enterprise Data Platform with Intelligent Observability</p>
+    <p>Generated for documentation purposes</p>
+</footer>
+</body>
+</html>

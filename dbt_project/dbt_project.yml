@@ -1,0 +1,127 @@
+# ============================================================================
+# EDP-IO - dbt Project Configuration
+# ============================================================================
+# This is the main dbt project configuration for the EDP-IO data platform.
+#
+# ARCHITECTURE:
+# - Silver Layer: Cleaned, validated, SCD Type 2 enabled
+# - Gold Layer: Star Schema optimized for analytics
+#
+# TARGET: Azure Databricks with Delta Lake
+# ============================================================================
+
+name: 'edp_io'
+version: '1.0.0'
+config-version: 2
+
+# Profile reference (see profiles.yml for connection details)
+profile: 'edp_io'
+
+# Directory structure
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Output directories (ignored by git)
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ============================================================================
+# Model Configuration
+# ============================================================================
+# Materializations and configurations by layer
+#
+# DESIGN DECISIONS:
+# - Silver: Incremental for efficiency, Delta format for ACID
+# - Gold: Table for query performance, with clustering
+# ============================================================================
+
+models:
+  edp_io:
+    # -------------------------------------------------------------------------
+    # SILVER LAYER - Clean, validated, historized data
+    # -------------------------------------------------------------------------
+    # Materialization: Incremental with Delta Lake
+    # Purpose: SCD Type 2, data cleansing, standardization
+    # -------------------------------------------------------------------------
+    silver:
+      +materialized: incremental
+      +incremental_strategy: merge
+      +unique_key: surrogate_key
+      +schema: silver
+      +tags: ['silver', 'scd2']
+      +post-hook:
+        - "{{ optimize_delta('this') }}"
+    
+    # -------------------------------------------------------------------------
+    # GOLD LAYER - Analytical models (Star Schema)
+    # -------------------------------------------------------------------------
+    # Materialization: Table for optimal query performance
+    # Purpose: Dimensions, facts, aggregations for BI
+    # -------------------------------------------------------------------------
+    gold:
+      +materialized: table
+      +schema: gold
+      +tags: ['gold', 'star_schema']
+      +post-hook:
+        - "{{ optimize_delta('this') }}"
+      
+      # Dimension tables
+      dimensions:
+        +tags: ['dimension']
+      
+      # Fact tables
+      facts:
+        +tags: ['fact']
+
+# ============================================================================
+# Variables
+# ============================================================================
+# Runtime variables for environment-specific behavior
+
+vars:
+  # Date range for development/testing
+  start_date: '2023-01-01'
+  end_date: '{{ modules.datetime.datetime.now().strftime("%Y-%m-%d") }}'
+  
+  # SCD Type 2 configuration
+  scd2_valid_from_default: '1900-01-01'
+  scd2_valid_to_default: '9999-12-31'
+  
+  # Environment flag (overridden in profiles.yml)
+  environment: 'development'
+
+# ============================================================================
+# Dispatch Configuration
+# ============================================================================
+# Use Databricks-specific implementations where available
+
+dispatch:
+  - macro_namespace: dbt
+    search_order: ['edp_io', 'dbt']
+
+# ============================================================================
+# On-Run Hooks
+# ============================================================================
+# Actions to execute at the start/end of dbt runs
+
+on-run-start:
+  - "{{ log('Starting EDP-IO dbt run', info=True) }}"
+  - "{{ log('Environment: ' ~ var('environment'), info=True) }}"
+
+on-run-end:
+  - "{{ log('EDP-IO dbt run completed', info=True) }}"
+
+# ============================================================================
+# Query Configuration
+# ============================================================================
+# Default query behavior settings
+
+query-comment:
+  comment: "EDP-IO dbt model: {{ model.name }}"
+  append: true

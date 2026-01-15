@@ -1,0 +1,288 @@
+version: 2
+
+# ============================================================================
+# EDP-IO - Silver Layer Schema Definition
+# ============================================================================
+# This file defines:
+# - Source declarations for Bronze layer
+# - Model documentation
+# - Data quality tests
+# - Column descriptions
+#
+# GOVERNANCE:
+# - Every column must be documented
+# - Critical business logic must have tests
+# - PII fields are marked for masking
+# ============================================================================
+
+# ============================================================================
+# SOURCES - Bronze Layer
+# ============================================================================
+
+sources:
+  - name: bronze
+    description: "Raw data layer from source systems (Oracle, SQL Server)"
+    database: "{{ var('bronze_database', 'edp_io_dev') }}"
+    schema: bronze
+    
+    tables:
+      - name: customers
+        description: "Customer data from Oracle CRM"
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: _ingestion_timestamp
+        columns:
+          - name: customer_id
+            description: "Unique customer identifier (business key)"
+            tests:
+              - not_null
+              - unique
+      
+      - name: products
+        description: "Product catalog from Oracle Inventory"
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+        loaded_at_field: _ingestion_timestamp
+        columns:
+          - name: product_id
+            description: "Unique product SKU"
+            tests:
+              - not_null
+              - unique
+      
+      - name: orders
+        description: "E-commerce orders from SQL Server"
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        loaded_at_field: _ingestion_timestamp
+        columns:
+          - name: order_id
+            description: "Unique order identifier"
+            tests:
+              - not_null
+              - unique
+      
+      - name: order_items
+        description: "Order line items from SQL Server"
+        loaded_at_field: _ingestion_timestamp
+        columns:
+          - name: order_item_id
+            tests:
+              - not_null
+              - unique
+          - name: order_id
+            tests:
+              - not_null
+              - relationships:
+                  to: source('bronze', 'orders')
+                  field: order_id
+      
+      - name: stores
+        description: "Store locations from Oracle POS"
+        loaded_at_field: _ingestion_timestamp
+
+# ============================================================================
+# MODELS - Silver Layer
+# ============================================================================
+
+models:
+  # --------------------------------------------------------------------------
+  # STAGED CUSTOMERS (SCD Type 2)
+  # --------------------------------------------------------------------------
+  - name: stg_customers
+    description: |
+      Cleaned and historized customer data with SCD Type 2.
+      
+      **Data Lineage:** bronze.customers → silver.stg_customers
+      
+      **SCD Type 2 Fields:**
+      - valid_from: When this version became effective
+      - valid_to: When this version was superseded (9999-12-31 for current)
+      - is_current: Boolean flag for current version
+      
+      **Change Tracking:** first_name, last_name, email, phone, 
+      address_line1, city, state, postal_code, customer_segment, is_active
+      
+    columns:
+      - name: surrogate_key
+        description: "Unique identifier for this version (hash of customer_id + valid_from)"
+        tests:
+          - unique
+          - not_null
+      
+      - name: customer_id
+        description: "Business key from source system"
+        tests:
+          - not_null
+      
+      - name: first_name
+        description: "Customer first name (PII - standardized to InitCap)"
+        meta:
+          pii: true
+          masking: partial
+      
+      - name: last_name
+        description: "Customer last name (PII - standardized to InitCap)"
+        meta:
+          pii: true
+          masking: partial
+      
+      - name: email
+        description: "Customer email address (PII - lowercase)"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "email IS NULL OR email LIKE '%@%.%'"
+        meta:
+          pii: true
+          masking: hash
+      
+      - name: phone
+        description: "Customer phone number (PII - digits only)"
+        meta:
+          pii: true
+          masking: partial
+      
+      - name: customer_segment
+        description: "Customer value segment"
+        tests:
+          - accepted_values:
+              values: ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']
+      
+      - name: is_active
+        description: "Whether customer account is active"
+        tests:
+          - not_null
+      
+      - name: valid_from
+        description: "SCD2: Start of validity period"
+        tests:
+          - not_null
+      
+      - name: valid_to
+        description: "SCD2: End of validity period"
+        tests:
+          - not_null
+      
+      - name: is_current
+        description: "SCD2: True if this is the current version"
+        tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # STAGED ORDERS
+  # --------------------------------------------------------------------------
+  - name: stg_orders
+    description: |
+      Cleaned and validated order data.
+      
+      **Data Lineage:** bronze.orders → silver.stg_orders
+      
+      **Validation Rules:**
+      - Total = Subtotal - Discount + Shipping (within 0.01)
+      - Status in valid enum
+      - Payment method in valid enum
+      
+    columns:
+      - name: order_id
+        description: "Unique order identifier"
+        tests:
+          - unique
+          - not_null
+      
+      - name: customer_id
+        description: "Reference to customer who placed the order"
+        tests:
+          - not_null
+      
+      - name: order_status
+        description: "Current status of the order"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED']
+      
+      - name: payment_method
+        description: "Payment method used"
+        tests:
+          - accepted_values:
+              values: ['CREDIT_CARD', 'DEBIT_CARD', 'PIX', 'BOLETO', 'WALLET']
+      
+      - name: total_amount
+        description: "Final order total after discounts and shipping"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "total_amount >= 0"
+      
+      - name: validation_status
+        description: "Data quality validation result"
+        tests:
+          - not_null
+      
+      - name: order_date_key
+        description: "Date key for joining to date dimension (YYYY-MM-DD)"
+
+  # --------------------------------------------------------------------------
+  # STAGED PRODUCTS (SCD Type 2)
+  # --------------------------------------------------------------------------
+  - name: stg_products
+    description: |
+      Cleaned product catalog with price history (SCD Type 2).
+      
+      **Data Lineage:** bronze.products → silver.stg_products
+      
+      **Why SCD2 for Products?**
+      - Track price changes for margin analysis
+      - Historical reporting accuracy
+      - "What was the margin on this product last quarter?"
+      
+    columns:
+      - name: surrogate_key
+        description: "Unique identifier for this version"
+        tests:
+          - unique
+          - not_null
+      
+      - name: product_id
+        description: "Business key (SKU)"
+        tests:
+          - not_null
+      
+      - name: product_name
+        description: "Product display name"
+        tests:
+          - not_null
+      
+      - name: unit_price
+        description: "Current selling price"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "unit_price >= 0"
+      
+      - name: unit_cost
+        description: "Product cost basis"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "unit_cost >= 0"
+      
+      - name: margin_percentage
+        description: "Calculated margin as percentage of price"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "margin_percentage IS NULL OR margin_percentage <= 100"
+      
+      - name: price_tier
+        description: "Price segmentation tier"
+        tests:
+          - accepted_values:
+              values: ['BUDGET', 'MID_RANGE', 'PREMIUM', 'LUXURY']
+      
+      - name: is_current
+        description: "SCD2: True if this is the current version"
+        tests:
+          - not_null

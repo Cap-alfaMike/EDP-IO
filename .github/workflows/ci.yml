@@ -1,0 +1,284 @@
+# ============================================================================
+# EDP-IO - CI/CD Pipeline
+# ============================================================================
+# Enterprise-grade CI/CD for data platform deployments.
+#
+# PIPELINE STAGES:
+# 1. Lint: Code quality checks
+# 2. Test: Unit tests with pytest
+# 3. dbt: Validate dbt models
+# 4. Security: Scan for vulnerabilities
+# 5. Build: Package artifacts
+# 6. Deploy: Deploy to target environment
+#
+# BRANCH STRATEGY:
+# - feature/* → Run lint + test
+# - main → Run all + deploy to staging
+# - release/* → Run all + deploy to prod (with approval)
+# ============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  PYTHON_VERSION: '3.11'
+  DBT_PROFILES_DIR: './dbt_project'
+
+jobs:
+  # ==========================================================================
+  # LINT - Code Quality Checks
+  # ==========================================================================
+  lint:
+    name: 🔍 Lint & Format
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install black flake8 mypy isort bandit
+      
+      - name: Check formatting with Black
+        run: black --check --diff src/ tests/
+      
+      - name: Check imports with isort
+        run: isort --check-only --diff src/ tests/
+      
+      - name: Lint with Flake8
+        run: flake8 src/ tests/ --max-line-length=100 --ignore=E501,W503
+      
+      - name: Type check with mypy
+        run: mypy src/ --ignore-missing-imports --no-error-summary
+        continue-on-error: true  # Advisory in early stages
+
+  # ==========================================================================
+  # TEST - Unit Tests
+  # ==========================================================================
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-xdist
+      
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-results.xml \
+            -v
+        env:
+          ENVIRONMENT: development
+          ENABLE_LLM_OBSERVABILITY: 'false'
+          ENABLE_REAL_DATABASE_CONNECTIONS: 'false'
+          ENABLE_AZURE_INTEGRATION: 'false'
+      
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results.xml
+
+  # ==========================================================================
+  # DBT - Validate dbt Models
+  # ==========================================================================
+  dbt:
+    name: 📊 dbt Validate
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dbt
+        run: |
+          pip install --upgrade pip
+          pip install dbt-core dbt-databricks
+      
+      - name: Verify dbt project
+        working-directory: ./dbt_project
+        run: |
+          dbt debug --profiles-dir . || true  # May fail without connection
+          dbt parse --profiles-dir .
+          dbt compile --profiles-dir . --target dev || true
+      
+      - name: Check SQL formatting (sqlfluff)
+        run: |
+          pip install sqlfluff sqlfluff-templater-dbt
+          sqlfluff lint dbt_project/models/ --dialect databricks || true
+        continue-on-error: true
+
+  # ==========================================================================
+  # SECURITY - Vulnerability Scanning
+  # ==========================================================================
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install security tools
+        run: pip install bandit safety
+      
+      - name: Bandit security scan
+        run: bandit -r src/ -ll --format json --output bandit-report.json
+        continue-on-error: true
+      
+      - name: Check dependencies for vulnerabilities
+        run: safety check -r requirements.txt --json --output safety-report.json
+        continue-on-error: true
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+  # ==========================================================================
+  # TERRAFORM - Infrastructure Validation
+  # ==========================================================================
+  terraform:
+    name: 🏗️ Terraform Validate
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Terraform Format Check
+        working-directory: ./infra/terraform
+        run: terraform fmt -check -recursive
+      
+      - name: Terraform Init
+        working-directory: ./infra/terraform
+        run: terraform init -backend=false
+      
+      - name: Terraform Validate
+        working-directory: ./infra/terraform
+        run: terraform validate
+
+  # ==========================================================================
+  # DEPLOY - Deploy to Environment
+  # ==========================================================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [test, dbt, security, terraform]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy notification
+        run: |
+          echo "🚀 Deploying to STAGING environment"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          # In production: Add actual deployment steps here
+          # - terraform apply
+          # - dbt run --target staging
+          # - Databricks job deployment
+      
+      - name: Create deployment summary
+        run: |
+          echo "## Staging Deployment ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | staging |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+
+  deploy-prod:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: startsWith(github.ref, 'refs/heads/release/')
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying to PRODUCTION environment"
+          echo "This would run terraform apply and dbt run --target prod"
+          # MOCK: Actual deployment commands would go here

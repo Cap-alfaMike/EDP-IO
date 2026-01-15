@@ -1,0 +1,81 @@
+# ============================================================================
+# EDP-IO - Enterprise Data Platform with Intelligent Observability
+# Python Dependencies - Mock Production-Ready
+# ============================================================================
+# Domain: Retail | Cloud: Azure (GCP-portable)
+# This file includes all dependencies for local development and testing.
+# Production deployments would install from a private artifact registry.
+# ============================================================================
+
+# -----------------------------------------------------------------------------
+# Core Data Processing
+# -----------------------------------------------------------------------------
+pyspark>=3.5.0                    # Apache Spark for distributed processing
+delta-spark>=3.1.0                # Delta Lake for ACID transactions
+pyarrow>=14.0.0                   # Columnar data format for performance
+
+# -----------------------------------------------------------------------------
+# dbt - Data Transformation
+# -----------------------------------------------------------------------------
+dbt-core>=1.7.0                   # Core dbt framework
+dbt-databricks>=1.7.0             # Databricks adapter for dbt
+sqlfluff>=2.3.0                   # SQL linting and formatting
+
+# -----------------------------------------------------------------------------
+# Azure SDK (Mock-Ready - No credentials required for development)
+# -----------------------------------------------------------------------------
+azure-identity>=1.15.0            # Managed Identity & authentication
+azure-keyvault-secrets>=4.7.0     # Key Vault secrets access
+azure-storage-file-datalake>=12.14.0  # ADLS Gen2 access
+azure-monitor-opentelemetry>=1.2.0    # Observability integration
+
+# -----------------------------------------------------------------------------
+# LLM & AI (Advisor-Only Mode)
+# -----------------------------------------------------------------------------
+openai>=1.10.0                    # OpenAI/Azure OpenAI client
+langchain>=0.1.0                  # LLM orchestration framework
+langchain-openai>=0.0.5           # OpenAI integration for LangChain
+tiktoken>=0.5.0                   # Token counting for cost estimation
+
+# -----------------------------------------------------------------------------
+# Web Interface
+# -----------------------------------------------------------------------------
+streamlit>=1.30.0                 # Dashboard framework
+plotly>=5.18.0                    # Interactive visualizations
+streamlit-mermaid>=0.2.0          # Mermaid diagram support
+pandas>=2.1.0                     # Data manipulation
+matplotlib>=3.8.0                 # Plotting and styling for pandas
+
+# -----------------------------------------------------------------------------
+# Testing & Quality
+# -----------------------------------------------------------------------------
+pytest>=7.4.0                     # Test framework
+pytest-cov>=4.1.0                 # Coverage reporting
+pytest-mock>=3.12.0               # Mocking utilities
+great-expectations>=0.18.0        # Data quality validation
+
+# -----------------------------------------------------------------------------
+# Code Quality & Security
+# -----------------------------------------------------------------------------
+black>=23.12.0                    # Code formatting
+flake8>=6.1.0                     # Linting
+mypy>=1.8.0                       # Type checking
+bandit>=1.7.0                     # Security linting
+pre-commit>=3.6.0                 # Git hooks
+
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+python-dotenv>=1.0.0              # Environment variable management
+pydantic>=2.5.0                   # Data validation
+pydantic-settings>=2.1.0          # Settings management
+pyyaml>=6.0.0                     # YAML parsing
+rich>=13.7.0                      # Terminal formatting
+structlog>=24.1.0                 # Structured logging
+
+# -----------------------------------------------------------------------------
+# Development Only
+# -----------------------------------------------------------------------------
+jupyter>=1.0.0                    # Notebooks for exploration
+ipykernel>=6.28.0                 # Jupyter kernel
+faker>=22.0.0                     # Fake data generation for mocks

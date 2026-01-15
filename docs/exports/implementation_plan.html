@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Implementation Plan - EDP-IO</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 { color: #1e3a5f; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2c5282; margin-top: 30px; }
+        h3 { color: #4a5568; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #1e3a5f; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        code { 
+            background-color: #f4f4f4; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: 'Consolas', monospace;
+        }
+        pre { 
+            background-color: #2d3748; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code { background: none; color: inherit; }
+        blockquote {
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: #f0f7ff;
+        }
+        .mermaid-placeholder {
+            background: #f0f0f0;
+            border: 2px dashed #999;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            margin: 20px 0;
+        }
+        @media print {
+            body { padding: 20px; }
+            pre { white-space: pre-wrap; }
+        }
+    </style>
+</head>
+<body>
+<h1 id="edp-io-implementation-plan">EDP-IO Implementation Plan</h1>
+<h2 id="1-main-architecture">1. Main Architecture</h2>
+<pre class="codehilite"><code class="language-mermaid">graph TB
+    subgraph Sources[&quot;📦 Source Systems&quot;]
+        ORACLE[(Oracle ERP&lt;br/&gt;Customers, Products, Stores)]
+        SQLSERVER[(SQL Server&lt;br/&gt;Orders, Order Items)]
+    end
+
+    subgraph Orchestration[&quot;⚙️ Orchestration&quot;]
+        AIRFLOW[Apache Airflow]
+    end
+
+    subgraph Lakehouse[&quot;🏠 Lakehouse - Delta Lake&quot;]
+        BRONZE[🥉 Bronze&lt;br/&gt;Raw Data]
+        SILVER[🥈 Silver&lt;br/&gt;SCD Type 2]
+        GOLD[🥇 Gold&lt;br/&gt;Star Schema]
+    end
+
+    subgraph Transform[&quot;🔄 Transformation&quot;]
+        DBT[dbt Core]
+    end
+
+    subgraph Observe[&quot;🔍 LLM Observability&quot;]
+        RAG[RAG Context]
+        ANALYZER[Log Analyzer]
+        DRIFT[Schema Drift]
+        METRICS[LLM Metrics]
+        LLM[Azure OpenAI]
+    end
+
+    subgraph Interface[&quot;📊 Interface&quot;]
+        DASH[Streamlit Dashboard]
+        CHAT[Ask the Architect]
+    end
+
+    ORACLE --&gt; AIRFLOW
+    SQLSERVER --&gt; AIRFLOW
+    AIRFLOW --&gt; BRONZE
+    BRONZE --&gt; DBT
+    DBT --&gt; SILVER
+    DBT --&gt; GOLD
+
+    BRONZE -.-&gt;|logs| ANALYZER
+    BRONZE -.-&gt;|schema| DRIFT
+    DBT -.-&gt;|manifest| RAG
+
+    RAG --&gt; LLM
+    ANALYZER --&gt; LLM
+    DRIFT --&gt; LLM
+    LLM --&gt; METRICS
+    LLM --&gt; CHAT
+
+    GOLD --&gt; DASH
+    METRICS --&gt; DASH
+    CHAT --&gt; DASH
+</code></pre>
+
+<hr />
+<h2 id="2-lakehouse-data-flow">2. Lakehouse Data Flow</h2>
+<pre class="codehilite"><code class="language-mermaid">flowchart LR
+    subgraph Bronze[&quot;🥉 Bronze Layer&quot;]
+        B1[customers]
+        B2[products]
+        B3[stores]
+        B4[orders]
+        B5[order_items]
+    end
+
+    subgraph Silver[&quot;🥈 Silver Layer&quot;]
+        S1[stg_customers&lt;br/&gt;SCD2]
+        S2[stg_products&lt;br/&gt;SCD2]
+        S3[stg_orders]
+    end
+
+    subgraph Gold[&quot;🥇 Gold Layer&quot;]
+        D1[dim_customer]
+        D2[dim_product]
+        D3[dim_date]
+        F1[fact_sales]
+    end
+
+    B1 --&gt;|dbt| S1
+    B2 --&gt;|dbt| S2
+    B4 &amp; B5 --&gt;|dbt| S3
+
+    S1 --&gt;|dbt| D1
+    S2 --&gt;|dbt| D2
+
+    D1 &amp; D2 &amp; D3 &amp; S3 --&gt;|dbt| F1
+</code></pre>
+
+<hr />
+<h2 id="3-star-schema-erd">3. Star Schema ERD</h2>
+<pre class="codehilite"><code class="language-mermaid">erDiagram
+    FACT_SALES {
+        bigint fact_sales_key PK
+        bigint dim_customer_key FK
+        bigint dim_product_key FK
+        int dim_date_key FK
+        string order_id
+        int units_sold
+        decimal gross_revenue
+        decimal discount_amount
+        decimal net_revenue
+        decimal cost_of_goods_sold
+        decimal gross_profit
+        decimal profit_margin_pct
+    }
+
+    DIM_CUSTOMER {
+        bigint dim_customer_key PK
+        string customer_id
+        string full_name
+        string email_masked
+        string city
+        string state
+        string region
+        string customer_segment
+        string tenure_band
+        boolean is_active
+        date valid_from
+        date valid_to
+    }
+
+    DIM_PRODUCT {
+        bigint dim_product_key PK
+        string product_id
+        string product_name
+        string category_name
+        string subcategory_name
+        string brand
+        decimal current_price
+        decimal current_cost
+        string price_tier
+        string margin_tier
+        boolean is_active
+    }
+
+    DIM_DATE {
+        int dim_date_key PK
+        date full_date
+        int day_of_week
+        string day_name
+        int week_of_year
+        int month_number
+        string month_name
+        int quarter
+        int year
+        boolean is_weekend
+        boolean is_holiday
+    }
+
+    FACT_SALES ||--o{ DIM_CUSTOMER : &quot;customer&quot;
+    FACT_SALES ||--o{ DIM_PRODUCT : &quot;product&quot;
+    FACT_SALES ||--o{ DIM_DATE : &quot;order date&quot;
+</code></pre>
+
+<hr />
+<h2 id="4-rag-pipeline-flow">4. RAG Pipeline Flow</h2>
+<pre class="codehilite"><code class="language-mermaid">flowchart TB
+    subgraph Input
+        Q[User Query / Error Log]
+    end
+
+    subgraph Classification[&quot;1️⃣ Query Classification&quot;]
+        CLS{Classify Query Type}
+        CLS --&gt;|error keywords| ERROR[ERROR_ANALYSIS]
+        CLS --&gt;|schema keywords| SCHEMA[SCHEMA_QUESTION]
+        CLS --&gt;|lineage keywords| LINEAGE[LINEAGE_QUESTION]
+        CLS --&gt;|explain/docs| DOCS[DOCUMENTATION]
+    end
+
+    subgraph Retrieval[&quot;2️⃣ Context Retrieval&quot;]
+        CONTRACT[(Data Contracts&lt;br/&gt;contracts.yaml)]
+        MANIFEST[(dbt Manifest&lt;br/&gt;manifest.json)]
+        HISTORY[(Error History&lt;br/&gt;Resolutions)]
+    end
+
+    subgraph Ranking[&quot;3️⃣ Relevance Ranking&quot;]
+        RANK[Score &amp; Rank Chunks&lt;br/&gt;by Query Similarity]
+    end
+
+    subgraph Generation[&quot;4️⃣ LLM Generation&quot;]
+        PROMPT[Construct Prompt&lt;br/&gt;Query + Top-K Context]
+        LLM[Azure OpenAI&lt;br/&gt;GPT-4]
+        RESP[Structured Response&lt;br/&gt;+ Confidence Score]
+    end
+
+    Q --&gt; CLS
+    ERROR &amp; SCHEMA &amp; LINEAGE &amp; DOCS --&gt; CONTRACT &amp; MANIFEST &amp; HISTORY
+    CONTRACT &amp; MANIFEST &amp; HISTORY --&gt; RANK
+    RANK --&gt; PROMPT
+    PROMPT --&gt; LLM
+    LLM --&gt; RESP
+</code></pre>
+
+<hr />
+<h2 id="5-airflow-dag-orchestration">5. Airflow DAG Orchestration</h2>
+<pre class="codehilite"><code class="language-mermaid">flowchart TB
+    START((Start)) --&gt; INGEST
+
+    subgraph INGEST[&quot;📥 Ingestion - Parallel&quot;]
+        direction LR
+        subgraph Oracle
+            ORA_CUST[customers]
+            ORA_PROD[products]
+            ORA_STORE[stores]
+        end
+        subgraph SQLServer
+            SQL_ORD[orders]
+            SQL_ITEMS[order_items]
+        end
+    end
+
+    INGEST --&gt; DBT_SILVER
+
+    subgraph DBT_SILVER[&quot;🥈 dbt Silver - Sequential&quot;]
+        SIL[dbt run --select tag:silver]
+    end
+
+    DBT_SILVER --&gt; DBT_GOLD
+
+    subgraph DBT_GOLD[&quot;🥇 dbt Gold - Sequential&quot;]
+        GOLD_RUN[dbt run --select tag:gold]
+    end
+
+    DBT_GOLD --&gt; DBT_TEST
+
+    subgraph DBT_TEST[&quot;✅ dbt Test&quot;]
+        TEST[dbt test]
+    end
+
+    DBT_TEST --&gt; OBS
+
+    subgraph OBS[&quot;🔍 Observability&quot;]
+        DOCS[Generate Docs]
+    end
+
+    OBS --&gt; NOTIFY
+    NOTIFY[Notify Success] --&gt; END((End))
+
+    style START fill:#27ae60
+    style END fill:#27ae60
+</code></pre>
+
+<hr />
+<h2 id="6-llm-observability-metrics">6. LLM Observability &amp; Metrics</h2>
+<pre class="codehilite"><code class="language-mermaid">flowchart LR
+    subgraph LLMCalls[&quot;LLM Calls&quot;]
+        CALL1[Log Analyzer]
+        CALL2[Schema Drift]
+        CALL3[Doc Generator]
+        CALL4[Chatbot]
+    end
+
+    subgraph Tracker[&quot;📊 Metrics Tracker&quot;]
+        TOKENS[Token Count]
+        LATENCY[Latency ms]
+        COST[Cost USD]
+        CONF[Confidence]
+        ROLE[Role Tag]
+    end
+
+    subgraph Store[&quot;💾 Metrics Store&quot;]
+        DB[(LLM Metrics&lt;br/&gt;JSON/TimeSeries)]
+    end
+
+    subgraph Analytics[&quot;📈 Analytics&quot;]
+        DAILY[Daily Trends]
+        BYROLE[By Role]
+        QUALITY[Quality Scores]
+        APPROVAL[Approval Rates]
+    end
+
+    subgraph Dashboard[&quot;🖥️ Streamlit&quot;]
+        VIZ[LLM Observability Page]
+    end
+
+    CALL1 &amp; CALL2 &amp; CALL3 &amp; CALL4 --&gt; Tracker
+    Tracker --&gt; Store
+    Store --&gt; Analytics
+    Analytics --&gt; VIZ
+</code></pre>
+
+<hr />
+<h2 id="7-cicd-pipeline-flow">7. CI/CD Pipeline Flow</h2>
+<pre class="codehilite"><code class="language-mermaid">flowchart TB
+    subgraph Trigger[&quot;🔔 Trigger&quot;]
+        PUSH[Git Push]
+        PR[Pull Request]
+        SCHED[Schedule Daily]
+    end
+
+    subgraph CI[&quot;🔍 Continuous Integration&quot;]
+        LINT[Lint&lt;br/&gt;Black, Flake8]
+        TEST[Test&lt;br/&gt;pytest]
+        DBT_VAL[dbt Validate&lt;br/&gt;Parse, Compile]
+        SEC[Security&lt;br/&gt;Bandit, Safety]
+        TF_VAL[Terraform&lt;br/&gt;fmt, validate]
+    end
+
+    subgraph CD[&quot;🚀 Continuous Deployment&quot;]
+        STAGING[Deploy Staging]
+        APPROVAL{Manual Approval}
+        PROD[Deploy Production]
+    end
+
+    PUSH &amp; PR --&gt; LINT
+    LINT --&gt; TEST
+    TEST --&gt; DBT_VAL &amp; SEC &amp; TF_VAL
+    DBT_VAL &amp; SEC &amp; TF_VAL --&gt; STAGING
+    STAGING --&gt; APPROVAL
+    APPROVAL --&gt;|approved| PROD
+
+    SCHED --&gt; DBT_VAL
+</code></pre>
+
+<hr />
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Diagram</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main Architecture</td>
+<td>Overall system components</td>
+</tr>
+<tr>
+<td>Lakehouse Flow</td>
+<td>Bronze → Silver → Gold transformation</td>
+</tr>
+<tr>
+<td>Star Schema ERD</td>
+<td>Dimensional model relationships</td>
+</tr>
+<tr>
+<td>RAG Pipeline</td>
+<td>Chained LLM context retrieval</td>
+</tr>
+<tr>
+<td>Airflow DAG</td>
+<td>Orchestration task dependencies</td>
+</tr>
+<tr>
+<td>LLM Metrics</td>
+<td>Observability data flow</td>
+</tr>
+<tr>
+<td>CI/CD Pipeline</td>
+<td>Deployment workflow</td>
+</tr>
+</tbody>
+</table>
+<footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+    <p>EDP-IO - Enterprise Data Platform with Intelligent Observability</p>
+    <p>Generated for documentation purposes</p>
+</footer>
+</body>
+</html>

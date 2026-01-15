@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>README - EDP-IO</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 { color: #1e3a5f; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2c5282; margin-top: 30px; }
+        h3 { color: #4a5568; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #1e3a5f; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        code { 
+            background-color: #f4f4f4; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: 'Consolas', monospace;
+        }
+        pre { 
+            background-color: #2d3748; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code { background: none; color: inherit; }
+        blockquote {
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: #f0f7ff;
+        }
+        .mermaid-placeholder {
+            background: #f0f0f0;
+            border: 2px dashed #999;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            margin: 20px 0;
+        }
+        @media print {
+            body { padding: 20px; }
+            pre { white-space: pre-wrap; }
+        }
+    </style>
+</head>
+<body>
+<h1 id="edp-io-enterprise-data-platform-with-intelligent-observability">EDP-IO: Enterprise Data Platform with Intelligent Observability</h1>
+<div align="center">
+
+![Platform Architecture](https://img.shields.io/badge/Architecture-Lakehouse-blue)
+![Cloud](https://img.shields.io/badge/Cloud-Azure-0089D6)
+![Domain](https://img.shields.io/badge/Domain-Retail-green)
+![Status](https://img.shields.io/badge/Status-Mock%20Production-orange)
+
+**A mock production-ready enterprise data platform demonstrating modern data engineering patterns, intelligent observability, and DataOps best practices.**
+
+[Architecture](#architecture) • [Quick Start](#quick-start) • [Modules](#modules) • [LLM Integration](#llm-observability) • [DataOps](#dataops)
+
+</div>
+
+<hr />
+<h2 id="executive-summary">🎯 Executive Summary</h2>
+<p>EDP-IO is a comprehensive data platform that ingests retail data from Oracle ERP and SQL Server e-commerce systems, transforms it through a Lakehouse architecture (Bronze → Silver → Gold), and provides intelligent observability using LLM-powered analysis.</p>
+<h3 id="key-differentiators">Key Differentiators</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mock Production-Ready</strong></td>
+<td>Production interfaces with development mocks—deploy with credentials only</td>
+</tr>
+<tr>
+<td><strong>LLM as Advisor Only</strong></td>
+<td>AI never executes; only suggests with human approval required</td>
+</tr>
+<tr>
+<td><strong>Enterprise Security</strong></td>
+<td>Secret management, PII masking, RBAC patterns</td>
+</tr>
+<tr>
+<td><strong>Full DataOps</strong></td>
+<td>IaC with Terraform, CI/CD with GitHub Actions, testing with pytest</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="architecture">🏗️ Architecture</h2>
+<h3 id="system-overview">System Overview</h3>
+<pre class="codehilite"><code class="language-mermaid">graph TB
+    subgraph Sources[&quot;📦 Source Systems&quot;]
+        ORACLE[(Oracle ERP&lt;br/&gt;Customers, Products)]
+        SQLSERVER[(SQL Server&lt;br/&gt;Orders, Items)]
+    end
+
+    subgraph Orchestration[&quot;⚙️ Orchestration&quot;]
+        AIRFLOW[Apache Airflow]
+    end
+
+    subgraph Lakehouse[&quot;🏠 Lakehouse&quot;]
+        BRONZE[🥉 Bronze] --&gt; SILVER[🥈 Silver]
+        SILVER --&gt; GOLD[🥇 Gold]
+    end
+
+    subgraph LLMObs[&quot;🔍 LLM Observability&quot;]
+        RAG[RAG Context] --&gt; LLM[Azure OpenAI]
+        LLM --&gt; METRICS[Metrics]
+    end
+
+    subgraph UI[&quot;📊 Interface&quot;]
+        DASH[Dashboard]
+        CHAT[Chatbot]
+    end
+
+    ORACLE &amp; SQLSERVER --&gt; AIRFLOW --&gt; BRONZE
+    BRONZE -.-&gt; RAG
+    GOLD --&gt; DASH
+    LLM --&gt; CHAT
+    METRICS --&gt; DASH
+</code></pre>
+
+<h3 id="lakehouse-data-flow">Lakehouse Data Flow</h3>
+<pre class="codehilite"><code class="language-mermaid">flowchart LR
+    subgraph Bronze[&quot;🥉 Bronze&quot;]
+        B1[customers]
+        B2[products]
+        B3[orders]
+        B4[order_items]
+    end
+
+    subgraph Silver[&quot;🥈 Silver - SCD2&quot;]
+        S1[stg_customers]
+        S2[stg_products]
+        S3[stg_orders]
+    end
+
+    subgraph Gold[&quot;🥇 Gold - Star Schema&quot;]
+        D1[dim_customer]
+        D2[dim_product]
+        D3[dim_date]
+        F1[fact_sales]
+    end
+
+    B1 --&gt; S1 --&gt; D1
+    B2 --&gt; S2 --&gt; D2
+    B3 &amp; B4 --&gt; S3
+    D1 &amp; D2 &amp; D3 &amp; S3 --&gt; F1
+</code></pre>
+
+<h3 id="star-schema-erd">Star Schema ERD</h3>
+<pre class="codehilite"><code class="language-mermaid">erDiagram
+    FACT_SALES ||--o{ DIM_CUSTOMER : &quot;customer_key&quot;
+    FACT_SALES ||--o{ DIM_PRODUCT : &quot;product_key&quot;
+    FACT_SALES ||--o{ DIM_DATE : &quot;date_key&quot;
+
+    FACT_SALES {
+        bigint fact_key PK
+        bigint customer_key FK
+        bigint product_key FK
+        int date_key FK
+        decimal net_revenue
+        decimal gross_profit
+        int units_sold
+    }
+
+    DIM_CUSTOMER {
+        bigint customer_key PK
+        string customer_id
+        string full_name
+        string segment
+        string region
+    }
+
+    DIM_PRODUCT {
+        bigint product_key PK
+        string product_id
+        string name
+        string category
+        decimal price
+    }
+
+    DIM_DATE {
+        int date_key PK
+        date full_date
+        string month_name
+        int quarter
+        int year
+    }
+</code></pre>
+
+<h3 id="rag-pipeline">RAG Pipeline</h3>
+<pre class="codehilite"><code class="language-mermaid">flowchart LR
+    Q[Query] --&gt; CLS{Classify}
+    CLS --&gt; RET[Retrieve Context]
+
+    subgraph Context
+        C1[(Data Contracts)]
+        C2[(dbt Manifest)]
+        C3[(Error History)]
+    end
+
+    RET --&gt; C1 &amp; C2 &amp; C3
+    C1 &amp; C2 &amp; C3 --&gt; RANK[Rank]
+    RANK --&gt; LLM[Azure OpenAI]
+    LLM --&gt; RESP[Response + Confidence]
+</code></pre>
+
+<h3 id="airflow-orchestration-dag">Airflow Orchestration DAG</h3>
+<pre class="codehilite"><code class="language-mermaid">flowchart TB
+    START((Start)) --&gt; ING
+
+    subgraph ING[&quot;📥 Ingestion - Parallel&quot;]
+        I1[Oracle: customers]
+        I2[Oracle: products]
+        I3[SQL: orders]
+    end
+
+    ING --&gt; DBT_S[dbt Silver]
+    DBT_S --&gt; DBT_G[dbt Gold]
+    DBT_G --&gt; DBT_T[dbt Test]
+    DBT_T --&gt; OBS[Generate Docs]
+    OBS --&gt; END((End))
+</code></pre>
+
+<h3 id="llm-observability-flow">LLM Observability Flow</h3>
+<pre class="codehilite"><code class="language-mermaid">flowchart LR
+    subgraph Calls
+        A[Log Analyzer]
+        B[Schema Drift]
+        C[Doc Generator]
+        D[Chatbot]
+    end
+
+    subgraph Track[&quot;📊 Tracker&quot;]
+        T[Tokens + Cost + Latency + Confidence]
+    end
+
+    subgraph Store
+        DB[(Metrics Store)]
+    end
+
+    subgraph Viz[&quot;📈 Dashboard&quot;]
+        V[LLM Observability Page]
+    end
+
+    A &amp; B &amp; C &amp; D --&gt; T --&gt; DB --&gt; V
+</code></pre>
+
+<h3 id="cicd-pipeline">CI/CD Pipeline</h3>
+<pre class="codehilite"><code class="language-mermaid">flowchart LR
+    PUSH[Git Push] --&gt; LINT[Lint]
+    LINT --&gt; TEST[pytest]
+    TEST --&gt; DBT[dbt validate]
+    DBT --&gt; SEC[Security Scan]
+    SEC --&gt; TF[Terraform]
+    TF --&gt; STAGING[Deploy Staging]
+    STAGING --&gt; PROD[Deploy Prod]
+</code></pre>
+
+<hr />
+<h3 id="technology-stack">Technology Stack</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Orchestration</strong></td>
+<td>Apache Airflow</td>
+<td>DAG scheduling, retries, observability</td>
+</tr>
+<tr>
+<td><strong>Ingestion</strong></td>
+<td>PySpark, Delta Lake</td>
+<td>JDBC reads, schema enforcement, idempotent writes</td>
+</tr>
+<tr>
+<td><strong>Transformation</strong></td>
+<td>dbt-core</td>
+<td>SCD Type 2, Star Schema, data quality tests</td>
+</tr>
+<tr>
+<td><strong>Storage</strong></td>
+<td>Azure Data Lake Gen2</td>
+<td>Hierarchical namespace, Delta format</td>
+</tr>
+<tr>
+<td><strong>Compute</strong></td>
+<td>Azure Databricks</td>
+<td>Unified analytics, Unity Catalog</td>
+</tr>
+<tr>
+<td><strong>Secrets</strong></td>
+<td>Azure Key Vault</td>
+<td>Centralized secret management</td>
+</tr>
+<tr>
+<td><strong>LLM</strong></td>
+<td>Azure OpenAI + RAG</td>
+<td>Advisory observability with context retrieval</td>
+</tr>
+<tr>
+<td><strong>Interface</strong></td>
+<td>Streamlit</td>
+<td>Executive dashboard, chatbot</td>
+</tr>
+<tr>
+<td><strong>IaC</strong></td>
+<td>Terraform</td>
+<td>Infrastructure as code</td>
+</tr>
+<tr>
+<td><strong>CI/CD</strong></td>
+<td>GitHub Actions</td>
+<td>Automated testing and deployment</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="quick-start">🚀 Quick Start</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>Python 3.11+</li>
+<li>Git</li>
+</ul>
+<h3 id="installation">Installation</h3>
+<pre class="codehilite"><code class="language-bash"># Clone repository
+git clone https://github.com/enterprise/edp-io.git
+cd edp-io
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment configuration
+cp .env.example .env
+</code></pre>
+
+<h3 id="run-dashboard-mock-mode">Run Dashboard (Mock Mode)</h3>
+<pre class="codehilite"><code class="language-bash"># Start Streamlit dashboard
+streamlit run app/main.py
+</code></pre>
+
+<p>Visit <code>http://localhost:8501</code> to see the executive dashboard.</p>
+<h3 id="run-tests">Run Tests</h3>
+<pre class="codehilite"><code class="language-bash"># Run all tests
+pytest tests/ -v
+
+# With coverage
+pytest tests/ --cov=src --cov-report=html
+</code></pre>
+
+<hr />
+<h2 id="project-structure">📦 Project Structure</h2>
+<pre class="codehilite"><code>EDP-IO/
+├── src/
+│   ├── ingestion/              # Bronze layer ingestion
+│   │   ├── bronze_writer.py    # Delta Lake writer with MERGE
+│   │   ├── oracle_ingest.py    # Oracle ERP ingestion
+│   │   ├── sqlserver_ingest.py # SQL Server ingestion
+│   │   ├── mock_data.py        # Retail mock data generator
+│   │   └── data_contracts/     # Schema definitions
+│   │
+│   ├── observability/          # LLM-powered observability
+│   │   ├── log_analyzer.py     # Error analysis with suggestions
+│   │   ├── schema_drift.py     # Schema change detection
+│   │   ├── doc_generator.py    # Auto-documentation
+│   │   ├── rag_context.py      # Chained RAG for context retrieval
+│   │   └── llm_metrics.py      # Usage/cost/quality tracking
+│   │
+│   ├── orchestrator/           # Pipeline orchestration
+│   │   └── dag_daily.py        # Airflow DAG
+│   │
+│   └── utils/                  # Core utilities
+│       ├── config.py           # Settings with feature flags
+│       ├── security.py         # SecretProvider, PIIMasker
+│       └── logging.py          # Structured logging
+│
+├── dbt_project/                # dbt transformations
+│   ├── models/
+│   │   ├── silver/             # SCD Type 2 models
+│   │   └── gold/               # Star schema (dims &amp; facts)
+│   └── macros/                 # SCD2 macro
+│
+├── app/                        # Streamlit interface
+│   ├── main.py                 # Executive dashboard
+│   └── pages/                  # Pipeline, Quality, Lineage, Chatbot, LLM Analytics
+│
+├── infra/terraform/            # Infrastructure as Code
+│   ├── main.tf                 # Azure resources
+│   └── environments/           # Dev/Prod configs
+│
+├── .github/workflows/          # CI/CD pipelines
+│   ├── ci.yml                  # Lint, test, deploy
+│   └── dbt-daily.yml           # Scheduled dbt runs
+│
+└── tests/                      # pytest test suite
+</code></pre>
+
+<hr />
+<h2 id="modules">🧩 Modules</h2>
+<h3 id="module-a-ingestion-bronze-layer">Module A: Ingestion &amp; Bronze Layer</h3>
+<p><strong>Purpose:</strong> Ingest data from source systems with enterprise patterns.</p>
+<p><strong>Key Features:</strong>
+- <strong>Data Contracts:</strong> YAML-defined schemas with quality rules
+- <strong>Idempotent Writes:</strong> MERGE operations prevent duplicates
+- <strong>Mock Fallback:</strong> <code>RetailMockDataGenerator</code> for development
+- <strong>Metadata Tracking:</strong> <code>_ingestion_timestamp</code>, <code>_batch_id</code>, <code>_source_system</code></p>
+<pre class="codehilite"><code class="language-python"># Example: Bronze ingestion
+from src.ingestion import BronzeWriter, WriteMode
+
+writer = BronzeWriter(spark, bronze_path=&quot;/data/bronze&quot;)
+writer.write(
+    df=customers_df,
+    table_name=&quot;customers&quot;,
+    source_system=&quot;oracle_erp&quot;,
+    business_keys=[&quot;customer_id&quot;],
+    mode=WriteMode.MERGE,
+)
+</code></pre>
+
+<h3 id="module-b-dbt-transformation">Module B: dbt Transformation</h3>
+<p><strong>Purpose:</strong> Transform Bronze to Silver (SCD2) and Gold (Star Schema).</p>
+<p><strong>Silver Layer (SCD Type 2):</strong>
+- <code>stg_customers</code> - Customer history with valid_from/valid_to
+- <code>stg_products</code> - Price history tracking
+- <code>stg_orders</code> - Validated transactions</p>
+<p><strong>Gold Layer (Star Schema):</strong>
+- <code>dim_customer</code> - Customer dimension with segments
+- <code>dim_product</code> - Product dimension with categories
+- <code>dim_date</code> - Calendar dimension
+- <code>fact_sales</code> - Order line grain with revenue/profit</p>
+<h3 id="module-c-llm-observability">Module C: LLM Observability</h3>
+<p><strong>Purpose:</strong> Intelligent observability with LLM as <em>advisor only</em>.</p>
+<p><strong>Key Principle:</strong> LLM never executes—only suggests with <code>requires_human_approval: true</code>.</p>
+<pre class="codehilite"><code class="language-python">from src.observability import LogAnalyzer
+
+analyzer = LogAnalyzer()
+result = analyzer.analyze(&quot;Schema error: column 'loyalty_points' not found&quot;)
+
+print(result.root_cause)          # &quot;New column added without contract update&quot;
+print(result.recommended_action)  # &quot;1. Review new column\n2. Update contract...&quot;
+print(result.requires_human_approval)  # Always True
+</code></pre>
+
+<p><strong>Components:</strong>
+| Component | Purpose |
+|-----------|---------|
+| <code>LogAnalyzer</code> | Analyze errors, suggest fixes |
+| <code>SchemaDriftDetector</code> | Detect and assess schema changes |
+| <code>DocGenerator</code> | Auto-generate documentation from dbt |
+| <code>RAGContextProvider</code> | Retrieve context for grounded LLM responses |</p>
+<p><strong>Chained RAG Architecture:</strong></p>
+<pre class="codehilite"><code>Query → [Classify] → [Retrieve Context] → [Rank] → [LLM + Context] → Response
+              ↓              ↓
+        QueryType      Data Contracts
+                       dbt Manifest
+                       Error History
+</code></pre>
+
+<h3 id="module-d-streamlit-interface">Module D: Streamlit Interface</h3>
+<p><strong>Purpose:</strong> Executive-friendly dashboard for platform monitoring.</p>
+<p><strong>Pages:</strong>
+1. <strong>Home</strong> - KPIs, pipeline health, alerts
+2. <strong>Pipeline Status</strong> - Execution history, errors
+3. <strong>Data Quality</strong> - Quality scores by layer, trends
+4. <strong>Data Lineage</strong> - Visual flow with Mermaid diagrams
+5. <strong>Ask the Architect</strong> - LLM-powered Q&amp;A chatbot
+6. <strong>LLM Observability</strong> - Token usage, costs, quality by role</p>
+<hr />
+<h2 id="security">🔒 Security</h2>
+<h3 id="feature-flags">Feature Flags</h3>
+<p>Control mock vs. production behavior via environment variables:</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ENABLE_LLM_OBSERVABILITY</code></td>
+<td><code>false</code></td>
+<td>Enable Azure OpenAI integration</td>
+</tr>
+<tr>
+<td><code>ENABLE_REAL_DATABASE_CONNECTIONS</code></td>
+<td><code>false</code></td>
+<td>Connect to real Oracle/SQL Server</td>
+</tr>
+<tr>
+<td><code>ENABLE_AZURE_INTEGRATION</code></td>
+<td><code>false</code></td>
+<td>Use Azure Key Vault for secrets</td>
+</tr>
+</tbody>
+</table>
+<h3 id="secret-management">Secret Management</h3>
+<pre class="codehilite"><code class="language-python">from src.utils.security import SecretProvider
+
+# Automatically uses MockSecretProvider in dev, AzureKeyVault in prod
+password = SecretProvider.get(&quot;ORACLE_PASSWORD&quot;)
+</code></pre>
+
+<h3 id="pii-masking">PII Masking</h3>
+<pre class="codehilite"><code class="language-python">from src.utils.security import PIIMasker
+
+# Masks emails, phones, CPF, credit cards
+masked = PIIMasker.mask(&quot;Email: john@email.com, CPF: 123.456.789-00&quot;)
+# Output: &quot;Email: j***@e***.com, CPF: ***.***.789-00&quot;
+</code></pre>
+
+<hr />
+<h2 id="dataops">⚙️ DataOps</h2>
+<h3 id="infrastructure-as-code-terraform">Infrastructure as Code (Terraform)</h3>
+<pre class="codehilite"><code class="language-bash">cd infra/terraform
+
+# Initialize
+terraform init
+
+# Plan for dev
+terraform plan -var-file=&quot;environments/dev.tfvars&quot;
+
+# Apply
+terraform apply -var-file=&quot;environments/dev.tfvars&quot;
+</code></pre>
+
+<p><strong>Resources Created:</strong>
+- Azure Resource Group
+- ADLS Gen2 Storage (Bronze/Silver/Gold containers)
+- Azure Key Vault
+- Databricks Workspace</p>
+<h3 id="cicd-github-actions">CI/CD (GitHub Actions)</h3>
+<p><strong>ci.yml</strong> runs on every push:
+1. <strong>Lint:</strong> Black, Flake8, mypy
+2. <strong>Test:</strong> pytest with coverage
+3. <strong>dbt:</strong> Parse and compile validation
+4. <strong>Security:</strong> Bandit, Safety scans
+5. <strong>Terraform:</strong> Format and validate
+6. <strong>Deploy:</strong> Staging (main) → Prod (release/*)</p>
+<p><strong>dbt-daily.yml</strong> runs scheduled:
+- Daily at 06:00 UTC
+- Sequential: Silver → Gold layers
+- Generates artifacts for lineage</p>
+<hr />
+<h2 id="interview-guide">📊 Interview Guide</h2>
+<h3 id="key-talking-points">Key Talking Points</h3>
+<ol>
+<li><strong>Why Lakehouse over traditional DW?</strong></li>
+<li>ACID transactions with Delta Lake</li>
+<li>Schema evolution support</li>
+<li>Time travel for debugging</li>
+<li>
+<p>Cost-effective storage</p>
+</li>
+<li>
+<p><strong>Why SCD Type 2?</strong></p>
+</li>
+<li>Full history preservation</li>
+<li>Point-in-time analysis</li>
+<li>Compliance requirements</li>
+<li>
+<p>Trade-off: Storage vs. query complexity</p>
+</li>
+<li>
+<p><strong>Why LLM as Advisor Only?</strong></p>
+</li>
+<li>Deterministic pipelines (no LLM in ETL)</li>
+<li>Human-in-the-loop safety</li>
+<li>Reduces MTTR without risk</li>
+<li>
+<p>Gradual trust building</p>
+</li>
+<li>
+<p><strong>How to make this production-ready?</strong></p>
+</li>
+<li>Add real credentials to Key Vault</li>
+<li>Remove feature flag overrides</li>
+<li>Configure production Terraform vars</li>
+<li>Enable Azure integration flags</li>
+</ol>
+<h3 id="design-trade-offs">Design Trade-offs</h3>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Trade-off</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Delta Lake</td>
+<td>Lock-in to Delta</td>
+<td>ACID + time travel worth it</td>
+</tr>
+<tr>
+<td>SCD2 everywhere</td>
+<td>Storage cost</td>
+<td>Historical analysis critical</td>
+</tr>
+<tr>
+<td>Mock-first</td>
+<td>Initial setup</td>
+<td>Enables CI/CD without credentials</td>
+</tr>
+<tr>
+<td>Incremental models</td>
+<td>Complexity</td>
+<td>Performance at scale</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="roadmap">🔮 Roadmap</h2>
+<ul>
+<li>[ ] Real-time ingestion with Kafka</li>
+<li>[ ] ML feature store integration</li>
+<li>[ ] Power BI semantic layer</li>
+<li>[ ] Multi-cloud (GCP Dataproc)</li>
+<li>[ ] Advanced LLM agents (with guardrails)</li>
+</ul>
+<hr />
+<h2 id="license">📄 License</h2>
+<p>This project is for demonstration purposes. See <a href="LICENSE">LICENSE</a> for details.</p>
+<hr />
+<div align="center">
+
+**Built with ❤️ for Data Engineering Excellence**
+
+[⬆ Back to Top](#edp-io-enterprise-data-platform-with-intelligent-observability)
+
+</div>
+<footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 0.9em;">
+    <p>EDP-IO - Enterprise Data Platform with Intelligent Observability</p>
+    <p>Generated for documentation purposes</p>
+</footer>
+</body>
+</html>

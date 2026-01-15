@@ -1,0 +1,533 @@
+# ============================================================================
+# EDP-IO - Data Contracts
+# ============================================================================
+# Data contracts define the expected schema, ownership, and quality expectations
+# for data flowing through the platform. They serve as a formal agreement between
+# data producers and consumers.
+#
+# WHY DATA CONTRACTS?
+# - Prevent schema drift from breaking downstream consumers
+# - Document data ownership and SLAs
+# - Enable automated schema validation
+# - Provide clear communication between teams
+#
+# ENFORCEMENT:
+# - Bronze: Validate incoming data against contract
+# - Rejection: Data that violates contract is sent to quarantine
+# - Alerting: Contract violations trigger observability alerts
+# ============================================================================
+
+# =============================================================================
+# RETAIL DOMAIN - SOURCE SYSTEMS
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# CUSTOMERS - From Oracle ERP (Legacy CRM)
+# -----------------------------------------------------------------------------
+customers:
+  source_system: oracle_erp
+  source_table: CRM.CUSTOMERS
+  owner: crm-team@enterprise.com
+  sla:
+    freshness_hours: 24
+    availability_percent: 99.9
+  
+  schema:
+    fields:
+      - name: customer_id
+        type: string
+        nullable: false
+        description: Unique customer identifier (business key)
+        pii: false
+        
+      - name: first_name
+        type: string
+        nullable: false
+        description: Customer first name
+        pii: true
+        masking_strategy: partial
+        
+      - name: last_name
+        type: string
+        nullable: false
+        description: Customer last name
+        pii: true
+        masking_strategy: partial
+        
+      - name: email
+        type: string
+        nullable: true
+        description: Customer email address
+        pii: true
+        masking_strategy: hash
+        validation: email_format
+        
+      - name: phone
+        type: string
+        nullable: true
+        description: Customer phone number
+        pii: true
+        masking_strategy: partial
+        
+      - name: address_line1
+        type: string
+        nullable: true
+        description: Street address
+        pii: true
+        
+      - name: city
+        type: string
+        nullable: true
+        description: City name
+        pii: false
+        
+      - name: state
+        type: string
+        nullable: true
+        description: State/Province code
+        pii: false
+        
+      - name: postal_code
+        type: string
+        nullable: true
+        description: Postal/ZIP code
+        pii: false
+        
+      - name: country_code
+        type: string
+        nullable: false
+        description: ISO 3166-1 alpha-2 country code
+        pii: false
+        default: BR
+        
+      - name: customer_segment
+        type: string
+        nullable: true
+        description: Customer segment classification
+        pii: false
+        allowed_values: [BRONZE, SILVER, GOLD, PLATINUM]
+        
+      - name: registration_date
+        type: date
+        nullable: false
+        description: Customer registration date
+        pii: false
+        
+      - name: is_active
+        type: boolean
+        nullable: false
+        description: Whether customer account is active
+        pii: false
+        default: true
+        
+      - name: created_at
+        type: timestamp
+        nullable: false
+        description: Record creation timestamp in source
+        pii: false
+        
+      - name: updated_at
+        type: timestamp
+        nullable: false
+        description: Record last update timestamp in source
+        pii: false
+
+  quality_rules:
+    - rule: customer_id_unique
+      type: uniqueness
+      columns: [customer_id]
+      severity: critical
+      
+    - rule: email_format_valid
+      type: regex
+      columns: [email]
+      pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+      severity: warning
+      
+    - rule: registration_not_future
+      type: comparison
+      expression: "registration_date <= current_date()"
+      severity: critical
+
+# -----------------------------------------------------------------------------
+# PRODUCTS - From Oracle ERP (Inventory)
+# -----------------------------------------------------------------------------
+products:
+  source_system: oracle_erp
+  source_table: INV.PRODUCTS
+  owner: inventory-team@enterprise.com
+  sla:
+    freshness_hours: 6
+    availability_percent: 99.9
+  
+  schema:
+    fields:
+      - name: product_id
+        type: string
+        nullable: false
+        description: Unique product identifier (SKU)
+        pii: false
+        
+      - name: product_name
+        type: string
+        nullable: false
+        description: Product display name
+        pii: false
+        
+      - name: category_id
+        type: string
+        nullable: false
+        description: Product category ID
+        pii: false
+        
+      - name: category_name
+        type: string
+        nullable: true
+        description: Product category name
+        pii: false
+        
+      - name: subcategory_name
+        type: string
+        nullable: true
+        description: Product subcategory
+        pii: false
+        
+      - name: brand
+        type: string
+        nullable: true
+        description: Product brand
+        pii: false
+        
+      - name: unit_price
+        type: decimal
+        precision: 10
+        scale: 2
+        nullable: false
+        description: Current unit price in BRL
+        pii: false
+        
+      - name: unit_cost
+        type: decimal
+        precision: 10
+        scale: 2
+        nullable: false
+        description: Unit cost in BRL
+        pii: false
+        
+      - name: stock_quantity
+        type: integer
+        nullable: false
+        description: Current stock quantity
+        pii: false
+        default: 0
+        
+      - name: is_active
+        type: boolean
+        nullable: false
+        description: Whether product is available for sale
+        pii: false
+        default: true
+        
+      - name: created_at
+        type: timestamp
+        nullable: false
+        pii: false
+        
+      - name: updated_at
+        type: timestamp
+        nullable: false
+        pii: false
+
+  quality_rules:
+    - rule: product_id_unique
+      type: uniqueness
+      columns: [product_id]
+      severity: critical
+      
+    - rule: price_positive
+      type: comparison
+      expression: "unit_price > 0"
+      severity: critical
+      
+    - rule: cost_less_than_price
+      type: comparison
+      expression: "unit_cost <= unit_price"
+      severity: warning
+
+# -----------------------------------------------------------------------------
+# ORDERS - From SQL Server (E-commerce Platform)
+# -----------------------------------------------------------------------------
+orders:
+  source_system: sqlserver_ecommerce
+  source_table: dbo.Orders
+  owner: ecommerce-team@enterprise.com
+  sla:
+    freshness_hours: 1
+    availability_percent: 99.99
+  
+  schema:
+    fields:
+      - name: order_id
+        type: string
+        nullable: false
+        description: Unique order identifier
+        pii: false
+        
+      - name: customer_id
+        type: string
+        nullable: false
+        description: Customer ID (FK to customers)
+        pii: false
+        
+      - name: order_date
+        type: timestamp
+        nullable: false
+        description: Order placement timestamp
+        pii: false
+        
+      - name: order_status
+        type: string
+        nullable: false
+        description: Current order status
+        pii: false
+        allowed_values: [PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED, RETURNED]
+        
+      - name: shipping_address
+        type: string
+        nullable: true
+        description: Shipping address
+        pii: true
+        masking_strategy: full
+        
+      - name: payment_method
+        type: string
+        nullable: false
+        description: Payment method used
+        pii: false
+        allowed_values: [CREDIT_CARD, DEBIT_CARD, PIX, BOLETO, WALLET]
+        
+      - name: subtotal
+        type: decimal
+        precision: 12
+        scale: 2
+        nullable: false
+        description: Order subtotal before discounts
+        pii: false
+        
+      - name: discount_amount
+        type: decimal
+        precision: 10
+        scale: 2
+        nullable: false
+        description: Total discount applied
+        pii: false
+        default: 0
+        
+      - name: shipping_cost
+        type: decimal
+        precision: 10
+        scale: 2
+        nullable: false
+        description: Shipping cost
+        pii: false
+        default: 0
+        
+      - name: total_amount
+        type: decimal
+        precision: 12
+        scale: 2
+        nullable: false
+        description: Final order total
+        pii: false
+        
+      - name: created_at
+        type: timestamp
+        nullable: false
+        pii: false
+        
+      - name: updated_at
+        type: timestamp
+        nullable: false
+        pii: false
+
+  quality_rules:
+    - rule: order_id_unique
+      type: uniqueness
+      columns: [order_id]
+      severity: critical
+      
+    - rule: total_calculation
+      type: comparison
+      expression: "abs(total_amount - (subtotal - discount_amount + shipping_cost)) < 0.01"
+      severity: critical
+      
+    - rule: customer_exists
+      type: referential_integrity
+      target_table: customers
+      target_column: customer_id
+      severity: critical
+
+# -----------------------------------------------------------------------------
+# ORDER_ITEMS - From SQL Server (E-commerce Platform)
+# -----------------------------------------------------------------------------
+order_items:
+  source_system: sqlserver_ecommerce
+  source_table: dbo.OrderItems
+  owner: ecommerce-team@enterprise.com
+  sla:
+    freshness_hours: 1
+    availability_percent: 99.99
+  
+  schema:
+    fields:
+      - name: order_item_id
+        type: string
+        nullable: false
+        description: Unique order item identifier
+        pii: false
+        
+      - name: order_id
+        type: string
+        nullable: false
+        description: Order ID (FK)
+        pii: false
+        
+      - name: product_id
+        type: string
+        nullable: false
+        description: Product ID (FK)
+        pii: false
+        
+      - name: quantity
+        type: integer
+        nullable: false
+        description: Quantity ordered
+        pii: false
+        
+      - name: unit_price
+        type: decimal
+        precision: 10
+        scale: 2
+        nullable: false
+        description: Price per unit at time of order
+        pii: false
+        
+      - name: discount_percent
+        type: decimal
+        precision: 5
+        scale: 2
+        nullable: false
+        description: Item discount percentage
+        pii: false
+        default: 0
+        
+      - name: line_total
+        type: decimal
+        precision: 12
+        scale: 2
+        nullable: false
+        description: Line item total
+        pii: false
+        
+      - name: created_at
+        type: timestamp
+        nullable: false
+        pii: false
+
+  quality_rules:
+    - rule: order_item_id_unique
+      type: uniqueness
+      columns: [order_item_id]
+      severity: critical
+      
+    - rule: quantity_positive
+      type: comparison
+      expression: "quantity > 0"
+      severity: critical
+      
+    - rule: line_total_calculation
+      type: comparison
+      expression: "abs(line_total - (quantity * unit_price * (1 - discount_percent/100))) < 0.01"
+      severity: warning
+
+# -----------------------------------------------------------------------------
+# STORES - From Oracle ERP
+# -----------------------------------------------------------------------------
+stores:
+  source_system: oracle_erp
+  source_table: POS.STORES
+  owner: operations-team@enterprise.com
+  sla:
+    freshness_hours: 24
+    availability_percent: 99.5
+  
+  schema:
+    fields:
+      - name: store_id
+        type: string
+        nullable: false
+        description: Unique store identifier
+        pii: false
+        
+      - name: store_name
+        type: string
+        nullable: false
+        description: Store display name
+        pii: false
+        
+      - name: store_type
+        type: string
+        nullable: false
+        description: Store type classification
+        pii: false
+        allowed_values: [FLAGSHIP, STANDARD, OUTLET, POPUP, WAREHOUSE]
+        
+      - name: region
+        type: string
+        nullable: false
+        description: Geographic region
+        pii: false
+        
+      - name: city
+        type: string
+        nullable: false
+        pii: false
+        
+      - name: state
+        type: string
+        nullable: false
+        pii: false
+        
+      - name: manager_name
+        type: string
+        nullable: true
+        description: Store manager name
+        pii: true
+        
+      - name: open_date
+        type: date
+        nullable: false
+        description: Store opening date
+        pii: false
+        
+      - name: is_active
+        type: boolean
+        nullable: false
+        default: true
+        pii: false
+        
+      - name: created_at
+        type: timestamp
+        nullable: false
+        pii: false
+        
+      - name: updated_at
+        type: timestamp
+        nullable: false
+        pii: false
+
+  quality_rules:
+    - rule: store_id_unique
+      type: uniqueness
+      columns: [store_id]
+      severity: critical

@@ -1,0 +1,101 @@
+# ============================================================================
+# EDP-IO - dbt Profiles Configuration
+# ============================================================================
+# Connection profiles for different environments.
+#
+# SECURITY:
+# - No credentials in this file
+# - Use environment variables or Key Vault
+# - This file can be safely committed (no secrets)
+#
+# USAGE:
+# - Development: Uses local Spark/Delta (or mock Databricks)
+# - Production: Uses Azure Databricks with Unity Catalog
+# ============================================================================
+
+edp_io:
+  # Target environment (can be overridden with --target flag)
+  target: dev
+  
+  outputs:
+    # -------------------------------------------------------------------------
+    # DEVELOPMENT - Local or Mock Databricks
+    # -------------------------------------------------------------------------
+    # Uses DuckDB or local Spark for rapid iteration
+    # No cloud credentials required
+    # -------------------------------------------------------------------------
+    dev:
+      type: databricks
+      catalog: edp_io_dev
+      schema: "{{ env_var('DBT_SCHEMA', 'dev_' ~ env_var('USER', 'default')) }}"
+      
+      # Connection (mock in development)
+      host: "{{ env_var('DATABRICKS_HOST', 'localhost') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH', '/sql/1.0/warehouses/mock') }}"
+      
+      # Authentication via environment variable (from Key Vault in prod)
+      token: "{{ env_var('DATABRICKS_TOKEN', 'mock-token-dev') }}"
+      
+      # Performance settings for dev
+      threads: 4
+      connect_retries: 3
+      connect_timeout: 30
+    
+    # -------------------------------------------------------------------------
+    # STAGING - Pre-production validation
+    # -------------------------------------------------------------------------
+    # Uses real Databricks with non-production data
+    # Mirrors production configuration for accurate testing
+    # -------------------------------------------------------------------------
+    staging:
+      type: databricks
+      catalog: edp_io_staging
+      schema: staging
+      
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
+      
+      threads: 8
+      connect_retries: 5
+      connect_timeout: 60
+    
+    # -------------------------------------------------------------------------
+    # PRODUCTION - Live data environment
+    # -------------------------------------------------------------------------
+    # Full production configuration
+    # Credentials from Azure Key Vault via Managed Identity
+    # -------------------------------------------------------------------------
+    prod:
+      type: databricks
+      catalog: edp_io_prod
+      schema: prod
+      
+      # Production Databricks workspace
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      
+      # Token from Key Vault (injected by CI/CD or Managed Identity)
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
+      
+      # Higher parallelism for production workloads
+      threads: 16
+      connect_retries: 5
+      connect_timeout: 120
+
+# ============================================================================
+# PRODUCTION NOTES:
+# ============================================================================
+# 1. In production, DATABRICKS_TOKEN is retrieved from Azure Key Vault
+#    by the CI/CD pipeline or Databricks Secret Scope
+#
+# 2. Unity Catalog provides:
+#    - Centralized governance
+#    - Cross-workspace access control
+#    - Data lineage tracking
+#    - Audit logging
+#
+# 3. For CI/CD:
+#    - dbt build --target staging (PR validation)
+#    - dbt build --target prod (main branch deployment)
+# ============================================================================

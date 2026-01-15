@@ -1,0 +1,134 @@
+# ============================================================================
+# EDP-IO - Enterprise Data Platform with Intelligent Observability
+# Project Configuration
+# ============================================================================
+# This file defines project metadata, build configuration, and tool settings.
+# It follows modern Python packaging standards (PEP 517/518/621).
+# ============================================================================
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edp-io"
+version = "0.1.0"
+description = "Enterprise Data Platform with Intelligent Observability - Mock Production MVP"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Data Platform Team", email = "data-platform@enterprise.com"}
+]
+keywords = [
+    "data-platform",
+    "lakehouse",
+    "delta-lake",
+    "dataops",
+    "observability",
+    "llm",
+    "azure",
+    "databricks"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/enterprise/edp-io"
+Documentation = "https://edp-io.readthedocs.io"
+Repository = "https://github.com/enterprise/edp-io.git"
+
+# ============================================================================
+# Tool Configurations
+# ============================================================================
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | dbt_project
+)/
+'''
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", "dist", "build", ".venv", "dbt_project"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = ["dbt_project", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "-ra",
+]
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (may require mocked services)",
+    "slow: Slow tests (skip with -m 'not slow')",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+fail_under = 70
+show_missing = true
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B101"]  # Allow assert in tests
+
+# ============================================================================
+# Setuptools Configuration
+# ============================================================================
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "app*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml", "*.json"]

@@ -1,0 +1,246 @@
+version: 2
+
+# ============================================================================
+# EDP-IO - Gold Layer Schema Definition
+# ============================================================================
+# Star Schema for Retail Analytics
+#
+# ARCHITECTURE:
+# - Dimensions: Customer, Product, Date (conformed)
+# - Facts: Sales (grain: order line item)
+#
+# BI TOOL INTEGRATION:
+# - Power BI / Tableau: Connect to Gold schema
+# - Materialized tables for fast queries
+# - Clear naming conventions
+# ============================================================================
+
+models:
+  # --------------------------------------------------------------------------
+  # DIMENSION: CUSTOMER
+  # --------------------------------------------------------------------------
+  - name: dim_customer
+    description: |
+      Customer dimension with current-state attributes.
+      
+      **Grain:** One row per customer (current state only)
+      
+      **Key for Facts:** dim_customer_key
+      
+      **Use Cases:**
+      - Customer segmentation analysis
+      - Geographic distribution
+      - Tenure and loyalty analysis
+      
+    columns:
+      - name: dim_customer_key
+        description: "Surrogate key for fact table joins"
+        tests:
+          - unique
+          - not_null
+      
+      - name: customer_id
+        description: "Natural key from source system"
+        tests:
+          - unique
+          - not_null
+      
+      - name: customer_segment
+        description: "Value tier: BRONZE, SILVER, GOLD, PLATINUM"
+        tests:
+          - accepted_values:
+              values: ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM']
+      
+      - name: tenure_segment
+        description: "NEW (<90d), DEVELOPING (<1y), ESTABLISHED (<2y), LOYAL (2y+)"
+      
+      - name: region
+        description: "Brazilian geographic region"
+        tests:
+          - accepted_values:
+              values: ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul', 'Unknown']
+
+  # --------------------------------------------------------------------------
+  # DIMENSION: PRODUCT
+  # --------------------------------------------------------------------------
+  - name: dim_product
+    description: |
+      Product dimension with category hierarchy and pricing.
+      
+      **Grain:** One row per product (current pricing)
+      
+      **Key for Facts:** dim_product_key
+      
+      **Use Cases:**
+      - Category performance
+      - Brand analysis
+      - Margin optimization
+      
+    columns:
+      - name: dim_product_key
+        description: "Surrogate key for fact table joins"
+        tests:
+          - unique
+          - not_null
+      
+      - name: product_id
+        description: "Natural key (SKU)"
+        tests:
+          - unique
+          - not_null
+      
+      - name: category_path
+        description: "Full category hierarchy (Category > Subcategory)"
+      
+      - name: price_tier
+        description: "BUDGET, MID_RANGE, PREMIUM, LUXURY"
+        tests:
+          - accepted_values:
+              values: ['BUDGET', 'MID_RANGE', 'PREMIUM', 'LUXURY']
+      
+      - name: margin_band
+        description: "LOW_MARGIN, STANDARD_MARGIN, GOOD_MARGIN, HIGH_MARGIN"
+      
+      - name: margin_percentage
+        description: "Calculated margin as % of price"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "margin_percentage >= 0 AND margin_percentage <= 100"
+
+  # --------------------------------------------------------------------------
+  # DIMENSION: DATE
+  # --------------------------------------------------------------------------
+  - name: dim_date
+    description: |
+      Standard date dimension for time-based analysis.
+      
+      **Grain:** One row per calendar date (2020-2030)
+      
+      **Key for Facts:** date_key (YYYYMMDD integer)
+      
+      **Use Cases:**
+      - Time series analysis
+      - Period comparisons
+      - Fiscal year reporting
+      
+    columns:
+      - name: date_key
+        description: "Integer key in YYYYMMDD format"
+        tests:
+          - unique
+          - not_null
+      
+      - name: calendar_date
+        description: "Actual date value"
+        tests:
+          - unique
+          - not_null
+      
+      - name: is_weekend
+        description: "Saturday or Sunday flag"
+      
+      - name: is_today
+        description: "Updates daily - TRUE for current date"
+
+  # --------------------------------------------------------------------------
+  # FACT: SALES
+  # --------------------------------------------------------------------------
+  - name: fact_sales
+    description: |
+      Sales transactions at order line item grain.
+      
+      **Grain:** One row per product in an order (order_item_id)
+      
+      **Dimensions:**
+      - dim_customer (customer_id → dim_customer_key)
+      - dim_product (product_id → dim_product_key)
+      - dim_date (order_date → dim_date_key)
+      
+      **Additive Measures:**
+      - units_sold, gross_revenue, net_revenue
+      - discount_amount, cost_of_goods_sold, gross_profit
+      
+      **Semi-Additive Measures:**
+      - unit_selling_price, unit_cost (average when aggregating)
+      - discount_percentage, margin_percentage (weighted avg)
+      
+      **Example Queries:**
+      ```sql
+      -- Total revenue by customer segment
+      SELECT c.customer_segment, SUM(f.net_revenue)
+      FROM fact_sales f
+      JOIN dim_customer c ON f.dim_customer_key = c.dim_customer_key
+      GROUP BY c.customer_segment
+      ```
+      
+    columns:
+      - name: fact_sales_key
+        description: "Unique identifier for each fact row"
+        tests:
+          - unique
+          - not_null
+      
+      - name: dim_customer_key
+        description: "Foreign key to dim_customer"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customer')
+              field: dim_customer_key
+      
+      - name: dim_product_key
+        description: "Foreign key to dim_product"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_product')
+              field: dim_product_key
+      
+      - name: dim_date_key
+        description: "Foreign key to dim_date"
+        tests:
+          - not_null
+      
+      - name: units_sold
+        description: "Quantity of products sold"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "units_sold > 0"
+      
+      - name: net_revenue
+        description: "Line total after discounts"
+        tests:
+          - not_null
+      
+      - name: gross_profit
+        description: "Revenue minus COGS"
+      
+      - name: order_status
+        description: "Current status of the parent order"
+        tests:
+          - accepted_values:
+              values: ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED']
+
+# ============================================================================
+# DATA QUALITY METRICS
+# ============================================================================
+
+exposures:
+  - name: retail_analytics_dashboard
+    type: dashboard
+    maturity: high
+    owner:
+      name: Analytics Team
+      email: analytics@enterprise.com
+    description: |
+      Main retail analytics dashboard powered by the Gold layer star schema.
+      Used by executives and analysts for business performance monitoring.
+    
+    depends_on:
+      - ref('fact_sales')
+      - ref('dim_customer')
+      - ref('dim_product')
+      - ref('dim_date')
+    
+    url: https://app.powerbi.com/reports/edp-io-retail
