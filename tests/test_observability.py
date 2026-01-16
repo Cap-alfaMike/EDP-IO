@@ -5,10 +5,6 @@
 Tests for LLM observability modules.
 """
 
-from unittest.mock import MagicMock, patch
-
-import pytest
-
 
 class TestLogAnalyzer:
     """Tests for the log analyzer module."""
