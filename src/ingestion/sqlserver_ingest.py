@@ -30,12 +30,17 @@ from typing import Any, Dict, List, Optional
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import (BooleanType, DecimalType, IntegerType,
-                               StringType, StructField, StructType,
-                               TimestampType)
+from pyspark.sql.types import (
+    BooleanType,
+    DecimalType,
+    IntegerType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
+)
 
-from src.ingestion.bronze_writer import (BronzeWriter, WriteMode,
-                                         get_spark_session)
+from src.ingestion.bronze_writer import BronzeWriter, WriteMode, get_spark_session
 from src.ingestion.mock_data import RetailMockDataGenerator
 from src.utils.config import get_settings
 from src.utils.logging import PipelineContext, get_logger

@@ -11,8 +11,7 @@ class TestLogAnalyzer:
 
     def test_error_analysis_model(self):
         """Test ErrorAnalysis model validation."""
-        from src.observability.log_analyzer import (ErrorAnalysis, ErrorType,
-                                                    Severity)
+        from src.observability.log_analyzer import ErrorAnalysis, ErrorType, Severity
 
         analysis = ErrorAnalysis(
             error_type=ErrorType.SCHEMA_DRIFT,
@@ -29,8 +28,7 @@ class TestLogAnalyzer:
 
     def test_requires_human_approval_always_true(self):
         """Test that requires_human_approval cannot be False."""
-        from src.observability.log_analyzer import (ErrorAnalysis, ErrorType,
-                                                    Severity)
+        from src.observability.log_analyzer import ErrorAnalysis, ErrorType, Severity
 
         # Even if we try to set it False, the system should enforce True
         analysis = ErrorAnalysis(
@@ -87,8 +85,7 @@ class TestSchemaDriftDetector:
         """Test detection of new columns."""
         mock_settings.enable_llm_observability = False
 
-        from src.observability.schema_drift import (ChangeType,
-                                                    SchemaDriftDetector)
+        from src.observability.schema_drift import ChangeType, SchemaDriftDetector
 
         detector = SchemaDriftDetector()
         report = detector.detect_drift(
@@ -107,8 +104,7 @@ class TestSchemaDriftDetector:
         """Test detection of removed columns."""
         mock_settings.enable_llm_observability = False
 
-        from src.observability.schema_drift import (ChangeType, SchemaColumn,
-                                                    SchemaDriftDetector)
+        from src.observability.schema_drift import ChangeType, SchemaColumn, SchemaDriftDetector
 
         expected = [
             SchemaColumn(name="id", data_type="string", nullable=False),
@@ -133,8 +129,7 @@ class TestSchemaDriftDetector:
         """Test detection of type changes."""
         mock_settings.enable_llm_observability = False
 
-        from src.observability.schema_drift import (ChangeType, SchemaColumn,
-                                                    SchemaDriftDetector)
+        from src.observability.schema_drift import ChangeType, SchemaColumn, SchemaDriftDetector
 
         expected = [
             SchemaColumn(name="amount", data_type="integer", nullable=False),
@@ -154,9 +149,7 @@ class TestSchemaDriftDetector:
         """Test no changes when schemas match."""
         mock_settings.enable_llm_observability = False
 
-        from src.observability.schema_drift import (DriftSeverity,
-                                                    SchemaColumn,
-                                                    SchemaDriftDetector)
+        from src.observability.schema_drift import DriftSeverity, SchemaColumn, SchemaDriftDetector
 
         schema = [
             SchemaColumn(name="id", data_type="string", nullable=False),
