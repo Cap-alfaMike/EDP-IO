@@ -5,11 +5,12 @@
 Shared fixtures and configuration for tests.
 """
 
-import pytest
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -18,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 @pytest.fixture
 def mock_settings():
     """Mock settings for testing without .env file."""
-    with patch('src.utils.config.get_settings') as mock:
+    with patch("src.utils.config.get_settings") as mock:
         settings = MagicMock()
         settings.environment = "development"
         settings.enable_llm_observability = False
@@ -37,7 +38,7 @@ def mock_settings():
 @pytest.fixture
 def mock_secret_provider():
     """Mock secret provider for testing."""
-    with patch('src.utils.security.SecretProvider') as mock:
+    with patch("src.utils.security.SecretProvider") as mock:
         mock.get.return_value = "MOCK-SECRET-VALUE"
         mock.exists.return_value = True
         yield mock
@@ -129,6 +130,7 @@ def sample_error_log():
 def sample_schema_expected():
     """Expected schema for drift detection testing."""
     from src.observability.schema_drift import SchemaColumn
+
     return [
         SchemaColumn(name="customer_id", data_type="string", nullable=False),
         SchemaColumn(name="first_name", data_type="string", nullable=False),
@@ -141,6 +143,7 @@ def sample_schema_expected():
 def sample_schema_actual():
     """Actual schema with drift for testing."""
     from src.observability.schema_drift import SchemaColumn
+
     return [
         SchemaColumn(name="customer_id", data_type="string", nullable=False),
         SchemaColumn(name="first_name", data_type="string", nullable=False),

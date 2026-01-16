@@ -11,8 +11,8 @@ real interfaces but can operate without cloud credentials using feature flags.
 """
 
 from src.utils.config import Settings, get_settings
-from src.utils.security import SecretProvider, PIIMasker
-from src.utils.logging import get_logger, configure_logging
+from src.utils.logging import configure_logging, get_logger
+from src.utils.security import PIIMasker, SecretProvider
 
 __all__ = [
     "Settings",

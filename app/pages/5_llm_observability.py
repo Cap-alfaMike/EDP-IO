@@ -13,13 +13,13 @@ VISUALIZATIONS:
 5. RAG Context Usage: How much context is being retrieved
 """
 
-import streamlit as st
+import random
+from datetime import datetime, timedelta
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import random
-
+import streamlit as st
 
 st.set_page_config(
     page_title="LLM Observability | EDP-IO",
@@ -35,22 +35,23 @@ st.caption("Monitor AI usage, costs, and quality across the data platform")
 # Mock Data Generation (for demo)
 # ============================================================================
 
+
 def generate_mock_llm_metrics():
     """Generate realistic mock LLM metrics for demo."""
     random.seed(42)
-    
+
     roles = ["log_analyzer", "schema_drift", "doc_generator", "chatbot"]
     role_weights = [0.3, 0.15, 0.1, 0.45]  # Chatbot used most
-    
+
     metrics = []
     now = datetime.now()
-    
+
     for i in range(500):  # 500 calls over 30 days
         days_ago = random.randint(0, 30)
         hours_ago = random.randint(0, 23)
-        
+
         role = random.choices(roles, role_weights)[0]
-        
+
         # Role-specific patterns
         if role == "log_analyzer":
             input_tokens = random.randint(500, 1500)
@@ -72,24 +73,26 @@ def generate_mock_llm_metrics():
             output_tokens = random.randint(100, 500)
             confidence = random.uniform(0.6, 0.9)
             latency = random.randint(500, 1800)
-        
+
         total_tokens = input_tokens + output_tokens
         cost = (input_tokens / 1000) * 0.01 + (output_tokens / 1000) * 0.03
-        
-        metrics.append({
-            "timestamp": now - timedelta(days=days_ago, hours=hours_ago),
-            "role": role,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "total_tokens": total_tokens,
-            "latency_ms": latency,
-            "cost_usd": cost,
-            "confidence": confidence,
-            "success": random.random() > 0.02,  # 98% success rate
-            "rag_chunks": random.randint(0, 5),
-            "human_approved": random.random() > 0.1 if random.random() > 0.3 else None,
-        })
-    
+
+        metrics.append(
+            {
+                "timestamp": now - timedelta(days=days_ago, hours=hours_ago),
+                "role": role,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens,
+                "latency_ms": latency,
+                "cost_usd": cost,
+                "confidence": confidence,
+                "success": random.random() > 0.02,  # 98% success rate
+                "rag_chunks": random.randint(0, 5),
+                "human_approved": random.random() > 0.1 if random.random() > 0.3 else None,
+            }
+        )
+
     return pd.DataFrame(metrics)
 
 
@@ -174,18 +177,31 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("📊 Usage by Role")
-    
-    role_stats = df_filtered.groupby("role").agg({
-        "total_tokens": ["count", "sum"],
-        "cost_usd": "sum",
-        "latency_ms": "mean",
-        "confidence": "mean",
-    }).round(2)
-    
+
+    role_stats = (
+        df_filtered.groupby("role")
+        .agg(
+            {
+                "total_tokens": ["count", "sum"],
+                "cost_usd": "sum",
+                "latency_ms": "mean",
+                "confidence": "mean",
+            }
+        )
+        .round(2)
+    )
+
     role_stats.columns = ["Calls", "Tokens", "Cost ($)", "Avg Latency (ms)", "Avg Confidence"]
     role_stats = role_stats.reset_index()
-    role_stats.columns = ["Role", "Calls", "Tokens", "Cost ($)", "Avg Latency (ms)", "Avg Confidence"]
-    
+    role_stats.columns = [
+        "Role",
+        "Calls",
+        "Tokens",
+        "Cost ($)",
+        "Avg Latency (ms)",
+        "Avg Confidence",
+    ]
+
     # Role icons
     role_icons = {
         "log_analyzer": "🔍",
@@ -194,14 +210,14 @@ with col1:
         "chatbot": "💬",
     }
     role_stats["Role"] = role_stats["Role"].apply(lambda x: f"{role_icons.get(x, '')} {x}")
-    
+
     st.dataframe(role_stats, use_container_width=True, hide_index=True)
 
 with col2:
     st.subheader("💰 Cost Distribution")
-    
+
     cost_by_role = df_filtered.groupby("role")["cost_usd"].sum().reset_index()
-    
+
     fig = px.pie(
         cost_by_role,
         values="cost_usd",
@@ -225,16 +241,30 @@ st.subheader("📈 Usage Trends")
 tab1, tab2, tab3 = st.tabs(["Calls & Tokens", "Cost", "Latency"])
 
 with tab1:
-    daily = df_filtered.groupby(df_filtered["timestamp"].dt.date).agg({
-        "total_tokens": ["count", "sum"],
-    }).reset_index()
+    daily = (
+        df_filtered.groupby(df_filtered["timestamp"].dt.date)
+        .agg(
+            {
+                "total_tokens": ["count", "sum"],
+            }
+        )
+        .reset_index()
+    )
     daily.columns = ["date", "calls", "tokens"]
-    
+
     fig = go.Figure()
     fig.add_trace(go.Bar(x=daily["date"], y=daily["calls"], name="Calls", marker_color="#3498db"))
-    fig.add_trace(go.Scatter(x=daily["date"], y=daily["tokens"]/1000, name="Tokens (K)", 
-                             yaxis="y2", marker_color="#e74c3c", mode="lines+markers"))
-    
+    fig.add_trace(
+        go.Scatter(
+            x=daily["date"],
+            y=daily["tokens"] / 1000,
+            name="Tokens (K)",
+            yaxis="y2",
+            marker_color="#e74c3c",
+            mode="lines+markers",
+        )
+    )
+
     fig.update_layout(
         yaxis=dict(title="Calls"),
         yaxis2=dict(title="Tokens (K)", overlaying="y", side="right"),
@@ -244,15 +274,29 @@ with tab1:
     st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
-    daily_cost = df_filtered.groupby(df_filtered["timestamp"].dt.date)["cost_usd"].sum().reset_index()
+    daily_cost = (
+        df_filtered.groupby(df_filtered["timestamp"].dt.date)["cost_usd"].sum().reset_index()
+    )
     daily_cost.columns = ["date", "cost"]
     daily_cost["cumulative"] = daily_cost["cost"].cumsum()
-    
+
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=daily_cost["date"], y=daily_cost["cost"], name="Daily Cost", marker_color="#27ae60"))
-    fig.add_trace(go.Scatter(x=daily_cost["date"], y=daily_cost["cumulative"], name="Cumulative", 
-                             yaxis="y2", marker_color="#9b59b6", mode="lines"))
-    
+    fig.add_trace(
+        go.Bar(
+            x=daily_cost["date"], y=daily_cost["cost"], name="Daily Cost", marker_color="#27ae60"
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=daily_cost["date"],
+            y=daily_cost["cumulative"],
+            name="Cumulative",
+            yaxis="y2",
+            marker_color="#9b59b6",
+            mode="lines",
+        )
+    )
+
     fig.update_layout(
         yaxis=dict(title="Daily Cost ($)"),
         yaxis2=dict(title="Cumulative ($)", overlaying="y", side="right"),
@@ -265,7 +309,7 @@ with tab3:
     hourly = df_filtered.copy()
     hourly["hour"] = hourly["timestamp"].dt.hour
     latency_by_hour = hourly.groupby("hour")["latency_ms"].mean().reset_index()
-    
+
     fig = px.line(
         latency_by_hour,
         x="hour",
@@ -291,7 +335,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("**Confidence Score Distribution**")
-    
+
     fig = px.histogram(
         df_filtered,
         x="confidence",
@@ -304,20 +348,24 @@ with col1:
 
 with col2:
     st.markdown("**Confidence by Role**")
-    
-    conf_by_role = df_filtered.groupby("role")["confidence"].agg(["mean", "min", "max"]).reset_index()
+
+    conf_by_role = (
+        df_filtered.groupby("role")["confidence"].agg(["mean", "min", "max"]).reset_index()
+    )
     conf_by_role.columns = ["Role", "Avg", "Min", "Max"]
-    
+
     fig = go.Figure()
     for _, row in conf_by_role.iterrows():
-        fig.add_trace(go.Scatter(
-            x=[row["Role"], row["Role"], row["Role"]],
-            y=[row["Min"], row["Avg"], row["Max"]],
-            mode="lines+markers",
-            name=row["Role"],
-            marker=dict(size=[8, 14, 8]),
-        ))
-    
+        fig.add_trace(
+            go.Scatter(
+                x=[row["Role"], row["Role"], row["Role"]],
+                y=[row["Min"], row["Avg"], row["Max"]],
+                mode="lines+markers",
+                name=row["Role"],
+                marker=dict(size=[8, 14, 8]),
+            )
+        )
+
     fig.update_layout(
         yaxis=dict(title="Confidence Score", range=[0.5, 1.0]),
         margin=dict(l=0, r=0, t=10, b=0),
@@ -364,22 +412,22 @@ approval_df = df_filtered[df_filtered["human_approved"].notna()]
 
 if len(approval_df) > 0:
     col1, col2 = st.columns(2)
-    
+
     with col1:
         approved = approval_df["human_approved"].sum()
         total = len(approval_df)
         rate = approved / total * 100
-        
+
         st.metric(
             "Approval Rate",
             f"{rate:.1f}%",
             f"{approved}/{total} approved",
         )
-    
+
     with col2:
         by_role = approval_df.groupby("role")["human_approved"].mean().reset_index()
         by_role["approval_rate"] = by_role["human_approved"] * 100
-        
+
         fig = px.bar(
             by_role,
             x="role",

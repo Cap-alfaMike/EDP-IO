@@ -19,10 +19,10 @@ PROVIDER CATEGORIES:
 
 USAGE:
     from src.providers import get_storage_provider, get_llm_provider
-    
+
     storage = get_storage_provider()  # Returns configured provider
     storage.upload("path/to/file", "container/key")
-    
+
     llm = get_llm_provider()
     response = llm.chat([{"role": "user", "content": "Hello"}])
 
@@ -32,10 +32,6 @@ CONFIGURATION:
     - SERVERLESS_MODE: true | false
 """
 
-from src.providers.storage import (
-    StorageProvider,
-    get_storage_provider,
-)
 from src.providers.compute import (
     ComputeProvider,
     get_compute_provider,
@@ -47,6 +43,10 @@ from src.providers.llm import (
 from src.providers.serverless import (
     ServerlessProvider,
     get_serverless_provider,
+)
+from src.providers.storage import (
+    StorageProvider,
+    get_storage_provider,
 )
 
 __all__ = [

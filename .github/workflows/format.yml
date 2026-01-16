@@ -1,0 +1,155 @@
+# ============================================================================
+# EDP-IO - Auto-Format & Lint Workflow
+# ============================================================================
+# This workflow automatically formats code using Black, isort, and Flake8.
+# It commits changes back to the branch if formatting is needed.
+#
+# WHEN: Every push to main, feature/*, release/* branches
+# WHAT: Reformats code automatically, commits, and runs linters
+# ============================================================================
+
+name: Auto-Format & Lint
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  format:
+    name: 🎨 Auto-Format Code
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install formatting tools
+        run: |
+          pip install --upgrade pip
+          pip install black isort flake8
+
+      - name: Run Black formatter
+        run: |
+          black \
+            --line-length=100 \
+            --exclude="\.venv|venv|env|\.env|edp-io-api|dbt_project|\.eggs|__pycache__" \
+            src/ app/ scripts/ tests/
+
+      - name: Run isort import sorter
+        run: |
+          isort \
+            --profile=black \
+            --line-length=100 \
+            --skip-glob="**/.venv/**" \
+            src/ app/ scripts/ tests/
+
+      - name: Check with Flake8
+        run: |
+          flake8 \
+            src/ app/ scripts/ tests/ \
+            --exclude=".venv,venv,edp-io-api,dbt_project,\.eggs,__pycache__" \
+            --max-line-length=100 \
+            --ignore=E203,W503
+        continue-on-error: true  # Don't fail, just warn
+
+      - name: Check if there are changes
+        id: verify-changed-files
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "CHANGES_EXIST=false" >> $GITHUB_OUTPUT
+          else
+            echo "CHANGES_EXIST=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes if needed
+        if: steps.verify-changed-files.outputs.CHANGES_EXIST == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -A
+          git commit -m "style: auto-format code with Black and isort" --no-verify
+
+      - name: Push changes
+        if: steps.verify-changed-files.outputs.CHANGES_EXIST == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          force: false
+
+      - name: Create pull request comment
+        if: github.event_name == 'pull_request' && steps.verify-changed-files.outputs.CHANGES_EXIST == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🎨 **Auto-Formatting Applied**\n\nCode has been automatically formatted with Black and isort. Please pull the latest changes.'
+            })
+
+  lint:
+    name: 🔍 Lint Check
+    runs-on: ubuntu-latest
+    needs: format
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install linting tools
+        run: |
+          pip install --upgrade pip
+          pip install black flake8 mypy isort
+
+      - name: Verify Black formatting
+        run: |
+          black --check --diff \
+            --exclude="\.venv|venv|env|\.env|edp-io-api|dbt_project|\.eggs|__pycache__" \
+            src/ app/ scripts/ tests/
+
+      - name: Verify imports with isort
+        run: |
+          isort --check-only --diff \
+            --profile=black \
+            --line-length=100 \
+            --skip-glob="**/.venv/**" \
+            src/ app/ scripts/ tests/
+
+      - name: Lint with Flake8
+        run: |
+          flake8 \
+            src/ app/ scripts/ tests/ \
+            --exclude=".venv,venv,edp-io-api,dbt_project,\.eggs,__pycache__" \
+            --max-line-length=100 \
+            --ignore=E203,W503
+        continue-on-error: true

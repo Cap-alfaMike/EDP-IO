@@ -4,7 +4,7 @@
 """
 Module A: Ingestion & Bronze Layer
 
-This package handles data ingestion from legacy source systems into the 
+This package handles data ingestion from legacy source systems into the
 Bronze layer of the Lakehouse architecture.
 
 ARCHITECTURAL OVERVIEW:

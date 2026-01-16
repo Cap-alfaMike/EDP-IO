@@ -11,11 +11,11 @@ Shows:
 - Retry controls (simulated)
 """
 
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
 import random
+from datetime import datetime, timedelta
 
+import pandas as pd
+import streamlit as st
 
 st.set_page_config(
     page_title="Pipeline Status | EDP-IO",
@@ -30,7 +30,7 @@ st.caption("Real-time monitoring of all data pipelines")
 def get_pipeline_history():
     """Generate mock pipeline history."""
     random.seed(42)
-    
+
     pipelines = [
         {"name": "oracle_customers", "source": "Oracle ERP", "target": "bronze.customers"},
         {"name": "oracle_products", "source": "Oracle ERP", "target": "bronze.products"},
@@ -40,31 +40,33 @@ def get_pipeline_history():
         {"name": "dbt_silver", "source": "Bronze Layer", "target": "Silver Layer"},
         {"name": "dbt_gold", "source": "Silver Layer", "target": "Gold Layer"},
     ]
-    
+
     history = []
     now = datetime.now()
-    
+
     for i in range(24):  # Last 24 runs
         for p in pipelines:
             run_time = now - timedelta(hours=i)
             status = random.choices(
                 ["Success", "Success", "Success", "Warning", "Failed"],
-                weights=[0.85, 0.05, 0.05, 0.03, 0.02]
+                weights=[0.85, 0.05, 0.05, 0.03, 0.02],
             )[0]
-            
+
             duration = random.randint(1, 15) if "dbt" not in p["name"] else random.randint(5, 25)
             records = random.randint(100, 5000) if status == "Success" else 0
-            
-            history.append({
-                "Pipeline": p["name"],
-                "Source": p["source"],
-                "Target": p["target"],
-                "Status": status,
-                "Start Time": run_time.strftime("%Y-%m-%d %H:%M"),
-                "Duration (min)": duration,
-                "Records": records,
-            })
-    
+
+            history.append(
+                {
+                    "Pipeline": p["name"],
+                    "Source": p["source"],
+                    "Target": p["target"],
+                    "Status": status,
+                    "Start Time": run_time.strftime("%Y-%m-%d %H:%M"),
+                    "Duration (min)": duration,
+                    "Records": records,
+                }
+            )
+
     return pd.DataFrame(history)
 
 
@@ -103,13 +105,16 @@ statuses = [
 cols = st.columns(len(statuses))
 for i, (name, status, last_run, records) in enumerate(statuses):
     with cols[i]:
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div style="text-align: center; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <strong style="font-size: 0.8em;">{name}</strong><br>
             <span style="font-size: 1.2em;">{status}</span><br>
             <small style="color: #666;">{last_run}</small>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
 
 st.markdown("---")
@@ -123,7 +128,17 @@ col1, col2, col3 = st.columns(3)
 with col1:
     status_filter = st.selectbox("Status", ["All", "Success", "Warning", "Failed"])
 with col2:
-    pipeline_filter = st.selectbox("Pipeline", ["All", "oracle_customers", "oracle_products", "sqlserver_orders", "dbt_silver", "dbt_gold"])
+    pipeline_filter = st.selectbox(
+        "Pipeline",
+        [
+            "All",
+            "oracle_customers",
+            "oracle_products",
+            "sqlserver_orders",
+            "dbt_silver",
+            "dbt_gold",
+        ],
+    )
 with col3:
     hours_filter = st.slider("Last N hours", 1, 24, 6)
 
@@ -137,10 +152,12 @@ if pipeline_filter != "All":
 
 df = df.head(hours_filter * 7)  # Approximate records
 
+
 # Color code status
 def color_status(val):
     colors = {"Success": "green", "Warning": "orange", "Failed": "red"}
     return f'color: {colors.get(val, "black")}'
+
 
 styled_df = df.style.applymap(color_status, subset=["Status"])
 st.dataframe(styled_df, use_container_width=True, height=400)
@@ -163,9 +180,9 @@ errors = [
 
 for error in errors:
     with st.expander(f"❌ {error['pipeline']} — {error['time']}"):
-        st.error(error['error'])
+        st.error(error["error"])
         st.info(f"💡 **Suggestion:** {error['suggestion']}")
-        
+
         col1, col2 = st.columns(2)
         with col1:
             st.button("🔄 Retry", key=f"retry_{error['pipeline']}")

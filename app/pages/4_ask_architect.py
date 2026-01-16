@@ -16,15 +16,17 @@ SAFETY:
 - References documentation and logs
 """
 
-import streamlit as st
-from datetime import datetime
 import json
+from datetime import datetime
+
+import streamlit as st
 
 # Try to import observability modules
 try:
-    from src.observability.log_analyzer import LogAnalyzer
     from src.observability.doc_generator import DocGenerator
+    from src.observability.log_analyzer import LogAnalyzer
     from src.utils.config import get_settings
+
     MODULES_AVAILABLE = True
 except ImportError:
     MODULES_AVAILABLE = False
@@ -53,7 +55,7 @@ I can help you with:
 - 🏗️ **Architecture** questions
 - 📊 **Data quality** insights
 
-What would you like to know?"""
+What would you like to know?""",
         }
     ]
 
@@ -66,29 +68,33 @@ context_mode = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("""
+st.sidebar.markdown(
+    """
 **Sample Questions:**
 - Why did the Oracle ingestion fail?
 - Explain the SCD Type 2 implementation
 - What tables are affected if customers fails?
 - How is customer segment calculated?
 - What's the grain of fact_sales?
-""")
+"""
+)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("""
+st.sidebar.caption(
+    """
 ⚠️ **Advisory Only Mode**
 
 This assistant provides suggestions and documentation. 
 It does not execute commands or modify data.
 All recommendations require human approval.
-""")
+"""
+)
 
 
 def get_mock_response(question: str) -> str:
     """Generate contextual mock responses."""
     q_lower = question.lower()
-    
+
     # Error/troubleshooting questions
     if any(word in q_lower for word in ["error", "fail", "issue", "problem", "why"]):
         return """Based on the recent logs, here's my analysis:
@@ -114,7 +120,9 @@ A new column `loyalty_points` was added to the CRM.CUSTOMERS table in the source
 Would you like me to generate the updated data contract?"""
 
     # Documentation questions
-    elif any(word in q_lower for word in ["explain", "what is", "how does", "documentation", "describe"]):
+    elif any(
+        word in q_lower for word in ["explain", "what is", "how does", "documentation", "describe"]
+    ):
         if "scd" in q_lower or "type 2" in q_lower:
             return """**SCD Type 2 Implementation in EDP-IO**
 
@@ -276,16 +284,16 @@ for message in st.session_state.messages:
 if prompt := st.chat_input("Ask me anything about the data platform..."):
     # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
-    
+
     with st.chat_message("user"):
         st.markdown(prompt)
-    
+
     # Generate response
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             response = get_mock_response(prompt)
         st.markdown(response)
-    
+
     # Add assistant response
     st.session_state.messages.append({"role": "assistant", "content": response})
 
@@ -300,8 +308,10 @@ with col2:
 
 
 st.markdown("---")
-st.caption("""
+st.caption(
+    """
 🔒 **Privacy Note:** This assistant uses Azure OpenAI in advisory mode. 
 No sensitive data is sent to external services. All analysis is based on 
 metadata and logs only.
-""")
+"""
+)

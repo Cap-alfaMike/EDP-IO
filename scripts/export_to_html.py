@@ -3,8 +3,9 @@ Convert markdown files to HTML for PDF export.
 Open the HTML files in a browser and use Print > Save as PDF.
 """
 
-import markdown
 from pathlib import Path
+
+import markdown
 
 # Source files
 files = [
@@ -14,7 +15,9 @@ files = [
 ]
 
 # Artifact directory
-artifact_dir = Path(r"C:\Users\tonim\.gemini\antigravity\brain\e9d2f7bb-06cf-4c1c-a2bd-e655ddb5c014")
+artifact_dir = Path(
+    r"C:\Users\tonim\.gemini\antigravity\brain\e9d2f7bb-06cf-4c1c-a2bd-e655ddb5c014"
+)
 readme_path = Path(r"d:\EDP-IO\README.md")
 output_dir = Path(r"d:\EDP-IO\docs\exports")
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -85,52 +88,55 @@ html_template = """<!DOCTYPE html>
 </html>
 """
 
+
 def convert_mermaid_blocks(html_content):
     """Replace mermaid code blocks with placeholders."""
     import re
+
     pattern = r'<pre><code class="language-mermaid">(.*?)</code></pre>'
-    replacement = '<div class="mermaid-placeholder">[Mermaid Diagram - View in GitHub/VS Code]</div>'
+    replacement = (
+        '<div class="mermaid-placeholder">[Mermaid Diagram - View in GitHub/VS Code]</div>'
+    )
     return re.sub(pattern, replacement, html_content, flags=re.DOTALL)
+
 
 def convert_to_html(md_content, title):
     """Convert markdown to styled HTML."""
     # Convert markdown to HTML
-    html = markdown.markdown(
-        md_content,
-        extensions=['tables', 'fenced_code', 'codehilite', 'toc']
-    )
-    
+    html = markdown.markdown(md_content, extensions=["tables", "fenced_code", "codehilite", "toc"])
+
     # Handle mermaid blocks
     html = convert_mermaid_blocks(html)
-    
+
     return html_template.format(title=title, content=html)
+
 
 # Process artifact files
 for filename, title in files:
     source_path = artifact_dir / filename
     if source_path.exists():
-        with open(source_path, 'r', encoding='utf-8') as f:
+        with open(source_path, "r", encoding="utf-8") as f:
             md_content = f.read()
-        
+
         html_content = convert_to_html(md_content, title)
-        
+
         output_path = output_dir / f"{filename.replace('.md', '.html')}"
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(html_content)
-        
+
         print(f"✅ Created: {output_path}")
 
 # Process README
 if readme_path.exists():
-    with open(readme_path, 'r', encoding='utf-8') as f:
+    with open(readme_path, "r", encoding="utf-8") as f:
         md_content = f.read()
-    
+
     html_content = convert_to_html(md_content, "README")
-    
+
     output_path = output_dir / "README.html"
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    
+
     print(f"✅ Created: {output_path}")
 
 print(f"\n📁 All files saved to: {output_dir}")

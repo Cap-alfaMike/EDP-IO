@@ -13,7 +13,6 @@ Shows:
 import streamlit as st
 from streamlit_mermaid import st_mermaid
 
-
 st.set_page_config(
     page_title="Data Lineage | EDP-IO",
     page_icon="🔗",
@@ -113,7 +112,8 @@ st.subheader("Layer Details")
 tab1, tab2, tab3 = st.tabs(["🥉 Bronze", "🥈 Silver", "🥇 Gold"])
 
 with tab1:
-    st.markdown("""
+    st.markdown(
+        """
     ### Bronze Layer
     **Purpose:** Raw data storage with minimal transformation
     
@@ -130,10 +130,12 @@ with tab1:
     - Idempotent ingestion (MERGE)
     - Ingestion metadata columns
     - Delta Lake with time travel
-    """)
+    """
+    )
 
 with tab2:
-    st.markdown("""
+    st.markdown(
+        """
     ### Silver Layer
     **Purpose:** Cleaned, validated, historized data
     
@@ -148,10 +150,12 @@ with tab2:
     - Data quality validation
     - Business key standardization
     - Audit columns (valid_from, valid_to)
-    """)
+    """
+    )
 
 with tab3:
-    st.markdown("""
+    st.markdown(
+        """
     ### Gold Layer
     **Purpose:** Star schema for analytics
     
@@ -167,7 +171,8 @@ with tab3:
     - Additive measures
     - Optimized for BI tools
     - Fast query performance
-    """)
+    """
+    )
 
 
 st.markdown("---")
@@ -178,7 +183,7 @@ st.subheader("Impact Analysis")
 
 selected_table = st.selectbox(
     "Select a table to see impact if it fails:",
-    ["bronze.customers", "bronze.orders", "silver.stg_customers", "gold.fact_sales"]
+    ["bronze.customers", "bronze.orders", "silver.stg_customers", "gold.fact_sales"],
 )
 
 impact_map = {
@@ -217,7 +222,7 @@ with col1:
     st.markdown(f"**Indirectly Dependent:** {', '.join(impact.get('indirect', [])) or 'None'}")
 
 with col2:
-    severity = impact.get('severity', 'UNKNOWN')
+    severity = impact.get("severity", "UNKNOWN")
     color = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢"}.get(severity, "⚪")
     st.markdown(f"**Severity:** {color} {severity}")
     st.markdown(f"**Affected Reports:** {', '.join(impact.get('affected_reports', []))}")
