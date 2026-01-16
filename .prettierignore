@@ -1,0 +1,20 @@
+# ============================================================================
+# EDP-IO - Prettier Ignore Configuration
+# ============================================================================
+# Prevents prettier from formatting virtual environments and build artifacts
+
+.venv
+venv
+env
+.env
+node_modules
+dist
+build
+.git
+.pytest_cache
+.mypy_cache
+.tox
+dbt_project
+edp-io-api
+*.egg-info
+__pycache__

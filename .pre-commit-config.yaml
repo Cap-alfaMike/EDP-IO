@@ -1,0 +1,97 @@
+# ============================================================================
+# EDP-IO - Pre-commit Hook Configuration
+# ============================================================================
+# Install hooks: pre-commit install
+# Run manually: pre-commit run --all-files
+# Update hooks: pre-commit autoupdate
+# ============================================================================
+
+repos:
+  # Black - Code formatter
+  - repo: https://github.com/psf/black
+    rev: '24.1.1'
+    hooks:
+      - id: black
+        name: black - code formatter
+        language_version: python3.11
+        args: ['--line-length=100']
+        exclude: '(\.venv|venv|edp-io-api|dbt_project|\.eggs|build|dist)'
+
+  # isort - Import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: '5.13.2'
+    hooks:
+      - id: isort
+        name: isort - import sorter
+        args: ['--profile=black', '--line-length=100']
+        exclude: '(\.venv|venv|edp-io-api|dbt_project)'
+
+  # Flake8 - Linting
+  - repo: https://github.com/PyCQA/flake8
+    rev: '7.0.0'
+    hooks:
+      - id: flake8
+        name: flake8 - style guide enforcement
+        args: ['--max-line-length=100', '--ignore=E203,W503']
+        exclude: '(\.venv|venv|edp-io-api|dbt_project|\.eggs|build|dist)'
+        additional_dependencies: ['flake8-bugbear', 'flake8-comprehensions']
+
+  # Trailing whitespace
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 'v4.5.0'
+    hooks:
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        exclude: '(\.venv|venv|\.git|\.md)'
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        exclude: '(\.venv|venv|\.git)'
+      - id: check-yaml
+        name: check-yaml
+        args: ['--unsafe']
+        exclude: '(\.venv|venv|\.github)'
+      - id: check-json
+        name: check-json
+        exclude: '(\.venv|venv)'
+      - id: check-added-large-files
+        name: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # Bandit - Security
+  - repo: https://github.com/PyCQA/bandit
+    rev: '1.7.6'
+    hooks:
+      - id: bandit
+        name: bandit - security check
+        args: ['-r', '--skip=B101']
+        exclude: '(\.venv|venv|tests|edp-io-api|dbt_project)'
+        language: system
+
+# ============================================================================
+# Global Configuration
+# ============================================================================
+default_language_version:
+  python: python3.11
+
+# Skip certain files globally
+exclude: |
+  (?x)^(
+    \.venv/|
+    venv/|
+    env/|
+    edp-io-api/|
+    dbt_project/|
+    \.eggs/|
+    build/|
+    dist/|
+    \.git/|
+    __pycache__/|
+    \.pytest_cache/|
+    \.mypy_cache/|
+    \.tox/|
+    \.coverage|
+    htmlcov/
+  )
+
+# Run only on staged files by default
+stages: [commit]
