@@ -62,7 +62,6 @@ jobs:
           isort \
             --profile=black \
             --line-length=100 \
-            --multi-line-mode=0 \
             --skip-glob="**/.venv/**" \
             src/ app/ scripts/ tests/
 
@@ -143,7 +142,6 @@ jobs:
           isort --check-only --diff \
             --profile=black \
             --line-length=100 \
-            --multi-line-mode=0 \
             --skip-glob="**/.venv/**" \
             src/ app/ scripts/ tests/
 
