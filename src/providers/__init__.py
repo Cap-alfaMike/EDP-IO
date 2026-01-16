@@ -32,22 +32,11 @@ CONFIGURATION:
     - SERVERLESS_MODE: true | false
 """
 
-from src.providers.compute import (
-    ComputeProvider,
-    get_compute_provider,
-)
-from src.providers.llm import (
-    LLMProvider,
-    get_llm_provider,
-)
-from src.providers.serverless import (
-    ServerlessProvider,
-    get_serverless_provider,
-)
-from src.providers.storage import (
-    StorageProvider,
-    get_storage_provider,
-)
+from src.providers.compute import ComputeProvider, get_compute_provider
+from src.providers.llm import LLMProvider, get_llm_provider
+from src.providers.serverless import (ServerlessProvider,
+                                      get_serverless_provider)
+from src.providers.storage import StorageProvider, get_storage_provider
 
 __all__ = [
     # Storage
