@@ -62,6 +62,8 @@ jobs:
           isort \
             --profile=black \
             --line-length=100 \
+            --force-alphabetical-sort-within-sections \
+            --no-lines-before=LOCALFOLDER \
             --skip-glob="**/.venv/**" \
             src/ app/ scripts/ tests/
 
@@ -90,6 +92,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add -A
           git commit -m "style: auto-format code with Black and isort" --no-verify
+        continue-on-error: true  # Don't fail if no changes to commit
 
       - name: Push changes
         if: steps.verify-changed-files.outputs.CHANGES_EXIST == 'true'
@@ -98,18 +101,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
           force: false
-
-      - name: Create pull request comment
-        if: github.event_name == 'pull_request' && steps.verify-changed-files.outputs.CHANGES_EXIST == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '🎨 **Auto-Formatting Applied**\n\nCode has been automatically formatted with Black and isort. Please pull the latest changes.'
-            })
+        continue-on-error: true  # Don't fail if already up to date
 
   lint:
     name: 🔍 Lint Check
@@ -142,6 +134,8 @@ jobs:
           isort --check-only --diff \
             --profile=black \
             --line-length=100 \
+            --force-alphabetical-sort-within-sections \
+            --no-lines-before=LOCALFOLDER \
             --skip-glob="**/.venv/**" \
             src/ app/ scripts/ tests/
 
