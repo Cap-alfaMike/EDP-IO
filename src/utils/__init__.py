@@ -10,7 +10,7 @@ All modules are designed with a "production-ready mock" pattern - they implement
 real interfaces but can operate without cloud credentials using feature flags.
 """
 
-from src.utils.config import get_settings, Settings
+from src.utils.config import Settings, get_settings
 from src.utils.logging import configure_logging, get_logger
 from src.utils.security import PIIMasker, SecretProvider
 
