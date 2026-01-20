@@ -5,10 +5,8 @@
 Tests for ingestion module including mock data generation and bronze writer.
 """
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
-
-import pytest
 
 
 class TestRetailMockDataGenerator:

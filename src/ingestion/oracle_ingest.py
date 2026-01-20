@@ -26,11 +26,10 @@
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F
 from pyspark.sql.types import (
     BooleanType,
     DateType,
@@ -254,7 +253,7 @@ class OracleIngestion:
         # Build query with optional watermark filter
         if watermark_column and watermark_value:
             query = f"""
-                (SELECT * FROM {table} 
+                (SELECT * FROM {table}
                  WHERE {watermark_column} > TO_TIMESTAMP('{watermark_value.isoformat()}', 'YYYY-MM-DD"T"HH24:MI:SS')
                 ) watermarked_query
             """

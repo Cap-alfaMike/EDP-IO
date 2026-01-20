@@ -6,7 +6,7 @@ Shared fixtures and configuration for tests.
 """
 
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -121,7 +121,7 @@ def sample_error_log():
       File "oracle_ingest.py", line 180, in _read_from_oracle
         return reader.load()
     pyspark.sql.utils.AnalysisException: Cannot resolve column 'loyalty_points' given input columns
-    
+
     Schema mismatch detected. Expected columns do not match actual columns from source.
     """
 

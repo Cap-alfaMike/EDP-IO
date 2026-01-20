@@ -30,15 +30,12 @@ For mock: In-memory with persistence to JSON
 import json
 import threading
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
-
-from src.utils.config import get_settings
 from src.utils.logging import get_logger
 
 logger = get_logger(__name__)

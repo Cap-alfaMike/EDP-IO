@@ -28,16 +28,14 @@ PRODUCTION NOTES:
 - This module works identically in dev and prod (only paths change)
 """
 
-import json
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from delta import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import StringType, StructField, StructType, TimestampType
+from pyspark.sql.types import StringType, StructType, TimestampType
 
 from src.utils.config import get_settings
 from src.utils.logging import PipelineContext, get_logger

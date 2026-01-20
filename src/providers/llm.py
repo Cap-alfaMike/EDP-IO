@@ -8,7 +8,7 @@ Cloud-agnostic LLM interface: Azure OpenAI, Vertex AI, Bedrock, Mock.
 import os
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Generator, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 

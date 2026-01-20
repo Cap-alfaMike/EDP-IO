@@ -39,7 +39,6 @@ When ENABLE_LLM_OBSERVABILITY=false, returns mock context.
 """
 
 import json
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional

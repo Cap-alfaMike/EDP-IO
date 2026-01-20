@@ -20,7 +20,7 @@ import os
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -548,7 +548,7 @@ class AWSS3Provider(StorageProvider):
         try:
             client.head_object(Bucket=bucket, Key=remote_path)
             return True
-        except:
+        except Exception:
             return False
 
     def get_uri(self, remote_path: str, container: Optional[str] = None) -> str:
