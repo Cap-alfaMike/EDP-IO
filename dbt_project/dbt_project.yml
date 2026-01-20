@@ -123,5 +123,5 @@ on-run-end:
 # Default query behavior settings
 
 query-comment:
-  comment: "EDP-IO dbt model: {{ model.name }}"
+  comment: "EDP-IO dbt model: {{ node.unique_id }}"
   append: true
