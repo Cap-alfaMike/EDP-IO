@@ -319,8 +319,7 @@ class GCPDataprocProvider(ComputeProvider):
             created_at=datetime.now(),
         )
 
-    def get_cluster(self, cluster_id: str) -> ClusterInfo:
-        ...
+    def get_cluster(self, cluster_id: str) -> ClusterInfo: ...
 
     def list_clusters(self) -> List[ClusterInfo]:
         return []
@@ -328,17 +327,14 @@ class GCPDataprocProvider(ComputeProvider):
     def terminate_cluster(self, cluster_id: str) -> bool:
         return True
 
-    def submit_job(self, config: JobConfig) -> JobRun:
-        ...
+    def submit_job(self, config: JobConfig) -> JobRun: ...
 
-    def get_job_status(self, run_id: str) -> JobRun:
-        ...
+    def get_job_status(self, run_id: str) -> JobRun: ...
 
     def cancel_job(self, run_id: str) -> bool:
         return True
 
-    def get_spark_session(self, cluster_id: Optional[str] = None):
-        ...
+    def get_spark_session(self, cluster_id: Optional[str] = None): ...
 
 
 # ============================================================================
@@ -372,8 +368,7 @@ class AWSEMRProvider(ComputeProvider):
             created_at=datetime.now(),
         )
 
-    def get_cluster(self, cluster_id: str) -> ClusterInfo:
-        ...
+    def get_cluster(self, cluster_id: str) -> ClusterInfo: ...
 
     def list_clusters(self) -> List[ClusterInfo]:
         return []
@@ -381,17 +376,14 @@ class AWSEMRProvider(ComputeProvider):
     def terminate_cluster(self, cluster_id: str) -> bool:
         return True
 
-    def submit_job(self, config: JobConfig) -> JobRun:
-        ...
+    def submit_job(self, config: JobConfig) -> JobRun: ...
 
-    def get_job_status(self, run_id: str) -> JobRun:
-        ...
+    def get_job_status(self, run_id: str) -> JobRun: ...
 
     def cancel_job(self, run_id: str) -> bool:
         return True
 
-    def get_spark_session(self, cluster_id: Optional[str] = None):
-        ...
+    def get_spark_session(self, cluster_id: Optional[str] = None): ...
 
 
 # ============================================================================
