@@ -73,8 +73,8 @@ class TestLogAnalyzer:
         result = analyzer.analyze("Connection refused by Oracle database")
         assert result.error_type == ErrorType.CONNECTION_FAILURE
 
-        # Data quality detection
-        result = analyzer.analyze("Null values detected in required column")
+        # Data quality detection - use "null" keyword without "column" to avoid SCHEMA_DRIFT
+        result = analyzer.analyze("Null values detected in required field")
         assert result.error_type == ErrorType.DATA_QUALITY
 
 

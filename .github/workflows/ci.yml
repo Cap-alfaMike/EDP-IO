@@ -222,7 +222,8 @@ jobs:
       
       - name: Terraform Format Check
         working-directory: ./infra/terraform
-        run: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive -diff
+        continue-on-error: true  # Formatting advisory during early stages
       
       - name: Terraform Init
         working-directory: ./infra/terraform

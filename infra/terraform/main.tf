@@ -96,7 +96,7 @@ variable "cost_center" {
 locals {
   # Naming convention: {resource_type}-{project}-{environment}-{region_code}
   name_prefix = "${var.project_name}-${var.environment}"
-  
+
   # Common tags for all resources
   common_tags = {
     Project      = var.project_name
