@@ -157,9 +157,9 @@ jobs:
       - name: Verify dbt project
         working-directory: ./dbt_project
         run: |
-          dbt debug --profiles-dir . || true  # May fail without connection
+          # Skip dbt debug - it hangs on Databricks retry when no connection
+          # dbt parse validates project structure and SQL syntax without connecting
           dbt parse --profiles-dir .
-          dbt compile --profiles-dir . --target dev || true
       
       - name: Check SQL formatting (sqlfluff)
         run: |
